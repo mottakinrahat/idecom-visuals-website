@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="38%" r="65%">
+      <stop offset="0" stop-color="#9CF60A" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#9CF60A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="360" height="640" fill="#0A0B08"/>
+  <rect width="360" height="640" fill="url(#g)"/>
+  <g transform="translate(115 215) scale(.2)">
+    <svg viewBox="205 120 455 675" width="455" height="675" x="-205" y="-120" overflow="visible">
+      <path fill="#9CF60A" d="M335 130 L428 197 L408 280 L318 212 Z"/>
+      <path fill="#F1F4EA" d="M315 237 L403 298 L330 643 L218 668 Z"/>
+      <path fill="#F1F4EA" d="M428 333 L603 303 L648 350 L566 752 L520 785 L362 662 L377 598 L470 665 L532 372 L412 404 Z"/>
+    </svg>
+  </g>
+  <text x="180" y="410" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="34" fill="#F1F4EA" letter-spacing="1">IDECOM</text>
+  <text x="180" y="448" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="24" fill="#9CF60A" letter-spacing="4">VISUALS</text>
+</svg>

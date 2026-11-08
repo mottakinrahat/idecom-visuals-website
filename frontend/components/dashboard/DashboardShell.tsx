@@ -1,0 +1,141 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import {
+  LayoutDashboard,
+  Wallet,
+  LayoutTemplate,
+  Contact,
+  Package,
+  Search,
+  Bell,
+  AlignLeft,
+  ChevronDown,
+  Sun,
+  Moon,
+  X,
+} from "@/components/dashboard/icons";
+import { Shapes, Logo } from "@/components/home/Shapes";
+import { useTheme } from "./theme";
+
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/income", label: "Income", icon: Wallet },
+  { href: "/dashboard/cms", label: "CMS", icon: LayoutTemplate },
+  { href: "/dashboard/crm", label: "CRM", icon: Contact },
+  { href: "/dashboard/package", label: "Package", icon: Package },
+];
+
+export default function DashboardShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [theme, toggleTheme] = useTheme();
+  const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  return (
+    <div className="dash min-h-screen flex" data-theme={theme}>
+      <Shapes />
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 bg-[var(--d-card)] border-r border-[var(--d-line)] flex flex-col transition-all duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } ${collapsed ? "lg:w-0 lg:overflow-hidden lg:border-r-0" : "w-60"}`}
+      >
+        <div className="h-[72px] px-5 flex items-center justify-between shrink-0">
+          <Logo />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="lg:hidden p-1.5 text-[var(--d-muted)]"
+            aria-label="Close sidebar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-3">
+          <label className="flex items-center gap-2 px-3 h-10 rounded-lg bg-[var(--d-card2)] text-[var(--d-muted)] text-sm">
+            <Search className="w-4 h-4" />
+            <input
+              placeholder="Search anything"
+              className="bg-transparent outline-none w-full placeholder:text-[var(--d-muted)]"
+            />
+          </label>
+        </div>
+
+        <nav className="px-3 mt-5 flex flex-col gap-1">
+          <span className="px-2 mb-1 text-[11px] tracking-wide text-[var(--d-muted)]">MAIN MENU</span>
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active =
+              item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={`relative flex items-center gap-3 px-3 h-10 rounded-lg text-sm transition-colors ${
+                  active
+                    ? "bg-[var(--d-tint)] text-[var(--d-fg)] font-semibold"
+                    : "text-[var(--d-fg)] hover:bg-[var(--d-card2)]"
+                }`}
+              >
+                {active && (
+                  <span className="absolute -left-3 top-0 bottom-0 w-1 rounded-r bg-[var(--d-accent)]" />
+                )}
+                <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+      {open && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
+      )}
+
+      {/* Main */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <header className="sticky top-0 z-30 h-[72px] px-5 lg:px-6 flex items-center justify-between bg-[var(--d-card)] border-b border-[var(--d-line)]">
+          <button
+            type="button"
+            onClick={() => (window.innerWidth >= 1024 ? setCollapsed((c) => !c) : setOpen(true))}
+            className="p-2 text-[var(--d-fg)]"
+            aria-label="Toggle sidebar"
+          >
+            <AlignLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-4">
+            <button type="button" className="p-2 text-[var(--d-fg)]" aria-label="Search">
+              <Search className="w-5 h-5" strokeWidth={1.8} />
+            </button>
+            <button type="button" className="p-2 text-[var(--d-fg)]" aria-label="Notifications">
+              <Bell className="w-5 h-5" strokeWidth={1.8} />
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 rounded-full border border-[var(--d-line)] text-[var(--d-fg)] hover:border-[var(--d-accent)]"
+              aria-label="Toggle light / dark mode"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <div className="flex items-center gap-2.5 pl-4 border-l border-[var(--d-line)]">
+              <span className="w-9 h-9 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] grid place-items-center text-sm font-bold">
+                ID
+              </span>
+              <span className="hidden sm:flex items-center gap-1 text-sm font-medium">
+                IDeCom <ChevronDown className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 p-5 lg:p-8 w-full max-w-[1440px] mx-auto">{children}</main>
+      </div>
+    </div>
+  );
+}
