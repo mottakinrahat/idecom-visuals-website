@@ -3,9 +3,15 @@
 import { useState, type CSSProperties } from "react";
 import { parseVideo } from "@/lib/embed";
 import Thumb from "./Thumb";
+import ContactForm from "./ContactForm";
 import ReelsViewer, { type Reel } from "./ReelsViewer";
-import { Logo, Marquee } from "./Shapes";
-import { useStudioStore, type VideoItem, type DesignItem } from "@/components/dashboard/store";
+import { Logo, Marquee, SocialIcon } from "./Shapes";
+import {
+  useStudioStore,
+  getActiveSocials,
+  resolveSocialHref,
+  type VideoItem,
+} from "@/components/dashboard/store";
 
 const Head = ({ eyebrow, title, em, sub }: { eyebrow: string; title: string; em: string; sub?: string }) => (
   <header className="sec-head">
@@ -136,62 +142,6 @@ export function Videos() {
   );
 }
 
-/* ---------- Designs ---------- */
-const renderPresetArt = (item: DesignItem) => {
-  if (item.imageUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={item.imageUrl} alt={item.cap} style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
-  }
-  switch (item.art) {
-    case "art-can":
-      return <div className="can" />;
-    case "art-dance":
-      return <div>DANCE<span>PASS</span></div>;
-    case "art-root":
-      return <div className="leaf">{item.label || "GREENROOT"}</div>;
-    case "art-sale":
-      return <div><big>50% OFF</big><small>Monsoon sale</small></div>;
-    case "art-coffee":
-      return <div>Coffee<b>Craft</b></div>;
-    case "art-noir":
-      return <>{item.label || "NOIR"}</>;
-    case "art-thumb":
-      return <div>I tried it<br /><span>7 days!</span></div>;
-    case "art-match":
-      return <div><span className="o">Match</span><span className="o">Day</span><span className="f">FRI · 9 PM</span></div>;
-    case "art-travel":
-      return <span style={{ position: "relative", zIndex: 1 }}>{item.label || "Summer escape"}</span>;
-    case "art-glow":
-      return <>{item.label || "glow."}</>;
-    case "art-deck":
-      return <div>Q3<br />Growth<br />Plan<small>PITCH DECK · 24 SLIDES</small></div>;
-    default:
-      return <div>{item.label}</div>;
-  }
-};
-
-export function Designs() {
-  const { content } = useStudioStore();
-  return (
-    <section className="sec glow" id="designs">
-      <div className="wrap">
-        <Head eyebrow={content.designs.eyebrow} title={content.designs.title} em={content.designs.em} />
-        <div className="works">
-          {content.designs.items.map((item) => (
-            <figure key={item.id} className={`work ${item.cls}`}>
-              <div className={`art ${item.imageUrl ? "" : item.art}`}>
-                {renderPresetArt(item)}
-              </div>
-              <figcaption>{item.cap}</figcaption>
-            </figure>
-          ))}
-        </div>
-        <div className="center"><a className="btn btn-lime" href="#designs">View all designs <span className="arr">→</span></a></div>
-      </div>
-    </section>
-  );
-}
-
 /* ---------- Team ---------- */
 export function Team() {
   const { content } = useStudioStore();
@@ -222,6 +172,9 @@ export function Team() {
 /* ---------- CTA + Footer ---------- */
 export function Cta() {
   const { content } = useStudioStore();
+  const activeSocials = getActiveSocials(content);
+  const waHref = resolveSocialHref("whatsapp", content.settings?.socialLinks?.whatsapp);
+
   return (
     <section className="sec cta" id="contact" style={{ paddingTop: 0 }}>
       <div className="wrap">
@@ -229,11 +182,30 @@ export function Cta() {
           <span className="eyebrow">{content.contact.eyebrow}</span>
           <h2>{content.contact.title}<em>{content.contact.em}</em></h2>
           <p className="sec-sub">{content.contact.sub}</p>
-          <a className="btn btn-lime" href={`https://wa.me/${content.contact.whatsappNumber}`} target="_blank" rel="noopener">
-            <svg className="wa" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" /></svg>
-            Direct chat on WhatsApp
-          </a>
-          <div className="socials">{content.contact.socials.map((s) => <a key={s.name} href={s.url}>{s.name}</a>)}</div>
+          <ContactForm />
+          <p className="cta-or"><span>or reach us directly</span></p>
+          {waHref && (
+            <a className="btn btn-lime" href={waHref} target="_blank" rel="noopener noreferrer">
+              <svg className="wa" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z" /></svg>
+              Direct chat on WhatsApp
+            </a>
+          )}
+          {activeSocials.length > 0 && (
+            <div className="socials">
+              {activeSocials.map((s) => (
+                <a
+                  key={s.key}
+                  href={s.href}
+                  aria-label={s.label}
+                  title={s.label}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <SocialIcon name={s.key} />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -242,6 +214,7 @@ export function Cta() {
 
 export function Footer() {
   const { content } = useStudioStore();
+  const activeSocials = getActiveSocials(content);
   return (
     <footer>
       <div className="wrap">
@@ -250,10 +223,26 @@ export function Footer() {
             <Logo />
             <span className="tag">Video production · Brand design · Marketing</span>
             <p>{content.contact.footerBio}</p>
+            {activeSocials.length > 0 && (
+              <div className="socials" style={{ justifyContent: "flex-start", marginTop: 18 }}>
+                {activeSocials.map((s) => (
+                  <a
+                    key={s.key}
+                    href={s.href}
+                    aria-label={s.label}
+                    title={s.label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <SocialIcon name={s.key} />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <h4>Navigation</h4>
-            <ul>{[["Home", "top"], ["Services", "services"], ["Videos", "videos"], ["Designs", "designs"], ["Team", "team"], ["Contact", "contact"]].map(([l, id]) => <li key={id}><a href={`#${id}`}>{l}</a></li>)}</ul>
+            <ul>{[["Home", "top"], ["Services", "services"], ["Videos", "videos"], ["Team", "team"], ["Contact", "contact"]].map(([l, id]) => <li key={id}><a href={`#${id}`}>{l}</a></li>)}</ul>
           </div>
           <div>
             <h4>Direct inquiries</h4>

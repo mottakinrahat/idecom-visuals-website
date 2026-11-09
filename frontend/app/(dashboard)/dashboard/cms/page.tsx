@@ -8,7 +8,6 @@ import {
   Video,
   Film,
   Smartphone,
-  Palette,
   Sparkles,
   Users,
   PhoneCall,
@@ -22,14 +21,12 @@ import {
 import {
   useStudioStore,
   type VideoItem,
-  type DesignItem,
 } from "@/components/dashboard/store";
 
 type CmsTab =
   | "hero"
   | "videos"
   | "reels"
-  | "designs"
   | "clients"
   | "services"
   | "team"
@@ -39,7 +36,6 @@ const TABS: { id: CmsTab; label: string; sub: string; icon: React.ComponentType<
   { id: "hero", label: "Hero & BG Video", sub: "Viewfinder & R2 video", icon: Video },
   { id: "videos", label: "16:9 Videos", sub: "Left → Right marquee", icon: Film },
   { id: "reels", label: "9:16 Reels", sub: "Right → Left marquee", icon: Smartphone },
-  { id: "designs", label: "Design Works", sub: "Images & portfolio grid", icon: Palette },
   { id: "clients", label: "Clients & Stats", sub: "Brands & counters", icon: Award },
   { id: "services", label: "Services", sub: "3 service pillars", icon: Sparkles },
   { id: "team", label: "Team Members", sub: "Portraits & roles", icon: Users },
@@ -152,66 +148,22 @@ export default function DashboardCmsPage() {
     notifySaved();
   };
 
-  /* Helpers for Designs */
-  const addDesignItem = () => {
-    const newDesign: DesignItem = {
-      id: `d-${Date.now()}`,
-      cls: "",
-      art: "art-can",
-      cap: "Brand Design · New project",
-      label: "NEW WORK",
-      imageUrl: "",
-    };
-    updateContent((prev) => ({
-      ...prev,
-      designs: {
-        ...prev.designs,
-        items: [newDesign, ...prev.designs.items],
-      },
-    }));
-    notifySaved();
-  };
-
-  const updateDesignItem = (id: string, patch: Partial<DesignItem>) => {
-    updateContent((prev) => ({
-      ...prev,
-      designs: {
-        ...prev.designs,
-        items: prev.designs.items.map((item) =>
-          item.id === id ? { ...item, ...patch } : item
-        ),
-      },
-    }));
-    notifySaved();
-  };
-
-  const deleteDesignItem = (id: string) => {
-    updateContent((prev) => ({
-      ...prev,
-      designs: {
-        ...prev.designs,
-        items: prev.designs.items.filter((item) => item.id !== id),
-      },
-    }));
-    notifySaved();
-  };
-
   return (
     <div className="flex flex-col gap-6">
       {/* Top CMS Bar */}
-      <div className="p-5 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-wrap items-center justify-between gap-4">
+      <div className="p-5 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-wrap items-center justify-between gap-4">
         <div>
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--d-accent)]">
+          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--d-accent)]">
             Visual Content Management System
           </span>
-          <h2 className="text-xl font-bold text-[var(--d-fg)] mt-0.5 tracking-tight normal-case">
-            Manage All Sections, Videos, Reels & Design Assets
+          <h2 className="text-base font-semibold text-[var(--d-fg)] mt-0.5  normal-case">
+            Manage All Sections, Videos & Reels
           </h2>
         </div>
 
         <div className="flex items-center gap-3">
           {savedToast && (
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--d-primary)]/15 border border-[var(--d-primary)]/40 text-xs font-mono text-[var(--d-accent)]">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--d-primary)]/15 border border-[var(--d-primary)]/40 text-[12px] font-mono text-[var(--d-accent)]">
               <Check className="w-3.5 h-3.5" />
               Auto-saved to live site
             </span>
@@ -222,7 +174,7 @@ export default function DashboardCmsPage() {
               resetContent();
               notifySaved();
             }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--d-card2)] hover:border-red-400/60 border border-[var(--d-line)] text-xs font-semibold text-[var(--d-muted)] hover:text-[var(--d-fg)] cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--d-card2)] hover:border-red-400/60 border border-[var(--d-line)] text-[12px] font-semibold text-[var(--d-muted)] hover:text-[var(--d-fg)] cursor-pointer transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset to Defaults
@@ -242,7 +194,7 @@ export default function DashboardCmsPage() {
               onClick={() => setActiveTab(t.id)}
               className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
                 active
-                  ? "bg-[var(--d-primary)] text-[var(--d-ink)] border-[var(--d-primary)] shadow-[0_8px_25px_rgba(156,246,10,0.2)]"
+                  ? "bg-[var(--d-primary)] text-[var(--d-ink)] border-[var(--d-primary)] shadow-[0_8px_25px_rgba(31,157,58,0.2)]"
                   : "bg-[var(--d-card)] text-[var(--d-fg)] border-[var(--d-line)] hover:border-[var(--d-primary)]/40"
               }`}
             >
@@ -252,7 +204,7 @@ export default function DashboardCmsPage() {
                 }`}
               />
               <div>
-                <div className="font-bold text-xs leading-tight">{t.label}</div>
+                <div className="font-semibold text-[12px] leading-tight">{t.label}</div>
                 <div
                   className={`text-[10px] mt-0.5 truncate ${
                     active ? "text-[var(--d-ink)]/75 font-medium" : "text-[var(--d-muted)]"
@@ -269,12 +221,12 @@ export default function DashboardCmsPage() {
       {/* TAB 1: HERO & BG VIDEO */}
       {activeTab === "hero" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-5">
+          <div className="lg:col-span-7 p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-5">
             <div>
               <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
                 Hero Section Configuration
               </span>
-              <h3 className="text-lg font-bold text-[var(--d-fg)] mt-0.5">
+              <h3 className="text-[15px] font-semibold text-[var(--d-fg)] mt-0.5">
                 Headlines, Viewfinder HUD & Background Video
               </h3>
             </div>
@@ -293,7 +245,7 @@ export default function DashboardCmsPage() {
                     }));
                     notifySaved();
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
                 />
               </div>
               <div>
@@ -309,7 +261,7 @@ export default function DashboardCmsPage() {
                     }));
                     notifySaved();
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm font-mono text-[var(--d-fg)]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] font-mono text-[var(--d-fg)]"
                 />
               </div>
               <div>
@@ -325,7 +277,7 @@ export default function DashboardCmsPage() {
                     }));
                     notifySaved();
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm font-bold text-[var(--d-fg)]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] font-semibold text-[var(--d-fg)]"
                 />
               </div>
               <div>
@@ -341,7 +293,7 @@ export default function DashboardCmsPage() {
                     }));
                     notifySaved();
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm font-bold text-[var(--d-accent)]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] font-semibold text-[var(--d-accent)]"
                 />
               </div>
             </div>
@@ -360,7 +312,7 @@ export default function DashboardCmsPage() {
                   notifySaved();
                 }}
                 placeholder="https://.../video.mp4"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs font-mono text-[var(--d-accent)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-accent)]"
               />
             </div>
 
@@ -377,7 +329,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
 
@@ -395,7 +347,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
 
@@ -421,7 +373,7 @@ export default function DashboardCmsPage() {
                         }));
                         notifySaved();
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] text-xs font-bold text-[var(--d-fg)]"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] text-[12px] font-semibold text-[var(--d-fg)]"
                     />
                     <input
                       value={fact.subtitle}
@@ -434,7 +386,7 @@ export default function DashboardCmsPage() {
                         }));
                         notifySaved();
                       }}
-                      className="px-2.5 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] text-xs text-[var(--d-muted)]"
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] text-[12px] text-[var(--d-muted)]"
                     />
                   </div>
                 ))}
@@ -443,7 +395,7 @@ export default function DashboardCmsPage() {
           </div>
 
           {/* Live Video & Viewfinder Preview */}
-          <div className="lg:col-span-5 p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4">
+          <div className="lg:col-span-5 p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4">
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
               Live Hero Viewfinder Preview
             </span>
@@ -469,14 +421,14 @@ export default function DashboardCmsPage() {
               </div>
 
               <div className="relative z-10 text-center my-auto py-4">
-                <span className="inline-block font-mono text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--d-primary)]/15 text-[var(--d-accent)] border border-[var(--d-primary)]/30 mb-2">
+                <span className="inline-block font-mono text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-[var(--d-primary)]/15 text-[var(--d-accent)] border border-[var(--d-primary)]/30 mb-2">
                   {content.hero.eyebrow}
                 </span>
-                <div className="font-extrabold uppercase leading-none tracking-wider">
-                  <div className="text-2xl sm:text-3xl text-white font-medium">
+                <div className="font-semibold uppercase leading-none tracking-wider">
+                  <div className="text-xl sm:text-2xl text-white font-medium">
                     {content.hero.titleLine1}
                   </div>
-                  <div className="text-xl sm:text-2xl text-[var(--d-accent)] font-extrabold mt-0.5">
+                  <div className="text-base sm:text-xl text-[var(--d-accent)] font-semibold mt-0.5">
                     {content.hero.titleLine2}
                   </div>
                 </div>
@@ -488,7 +440,7 @@ export default function DashboardCmsPage() {
                 {content.hero.description}
               </div>
             </div>
-            <p className="text-xs text-[var(--d-muted)]">
+            <p className="text-[12px] text-[var(--d-muted)]">
               Changes made here automatically update the main Hero section on{" "}
               <code className="text-[var(--d-accent)]">/</code>.
             </p>
@@ -506,7 +458,7 @@ export default function DashboardCmsPage() {
                   ? "Upper Marquee Row (Moves Left → Right, Pauses on Hover)"
                   : "Bottom Marquee Row (Moves Right → Left, Pauses on Hover)"}
               </span>
-              <h3 className="text-lg font-bold text-[var(--d-fg)] mt-0.5">
+              <h3 className="text-[15px] font-semibold text-[var(--d-fg)] mt-0.5">
                 {activeTab === "videos"
                   ? `16:9 Landscape Featured Videos (${content.videos.landscape.length})`
                   : `9:16 Vertical Short-Form Reels (${content.videos.vertical.length})`}
@@ -517,7 +469,7 @@ export default function DashboardCmsPage() {
               onClick={() =>
                 addVideoItem(activeTab === "videos" ? "landscape" : "vertical")
               }
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--d-primary)] hover:bg-[var(--d-primary-hi)] text-[var(--d-ink)] text-xs font-bold cursor-pointer transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--d-primary)] hover:bg-[var(--d-primary-hi)] text-[var(--d-ink)] text-[12px] font-semibold cursor-pointer transition-colors"
             >
               <Plus className="w-4 h-4" />
               {activeTab === "videos" ? "Add 16:9 Video" : "Add 9:16 Reel"}
@@ -558,7 +510,7 @@ export default function DashboardCmsPage() {
                         className="absolute inset-0 w-full h-full object-cover opacity-80"
                       />
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center font-extrabold uppercase text-3xl tracking-wider text-white/10 select-none pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center font-semibold uppercase text-2xl tracking-wider text-white/10 select-none pointer-events-none">
                       {item.w}
                     </div>
                     <div className="absolute top-2.5 left-2.5 right-2.5 flex justify-between font-mono text-[10px]">
@@ -570,7 +522,7 @@ export default function DashboardCmsPage() {
                       </span>
                     </div>
                     <div className="absolute bottom-2.5 left-3 right-3">
-                      <div className="font-bold text-sm text-white truncate">
+                      <div className="font-semibold text-[13px] text-white truncate">
                         {item.t}
                       </div>
                       <div className="font-mono text-[10px] text-[var(--d-accent)]">
@@ -590,7 +542,7 @@ export default function DashboardCmsPage() {
                         onChange={(e) =>
                           updateVideoItem(kind, item.id, { t: e.target.value })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs font-semibold text-[var(--d-fg)]"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-semibold text-[var(--d-fg)]"
                       />
                     </div>
                     <div>
@@ -602,7 +554,7 @@ export default function DashboardCmsPage() {
                         onChange={(e) =>
                           updateVideoItem(kind, item.id, { tag: e.target.value })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                       />
                     </div>
                     <div>
@@ -614,7 +566,7 @@ export default function DashboardCmsPage() {
                         onChange={(e) =>
                           updateVideoItem(kind, item.id, { w: e.target.value })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                       />
                     </div>
                     <div>
@@ -627,7 +579,7 @@ export default function DashboardCmsPage() {
                         onChange={(e) =>
                           updateVideoItem(kind, item.id, { d: e.target.value })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs font-mono text-[var(--d-accent)]"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-accent)]"
                       />
                     </div>
                     <div className="flex items-end gap-2">
@@ -670,7 +622,7 @@ export default function DashboardCmsPage() {
                           })
                         }
                         placeholder="Paste YouTube or Facebook video link"
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs font-mono text-[var(--d-fg)]"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-fg)]"
                       />
                     </div>
                     <div className="col-span-2">
@@ -686,9 +638,9 @@ export default function DashboardCmsPage() {
                             })
                           }
                           placeholder="Paste image URL or upload →"
-                          className="flex-1 px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                          className="flex-1 px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                         />
-                        <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-xs text-[var(--d-accent)] cursor-pointer shrink-0">
+                        <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-[12px] text-[var(--d-accent)] cursor-pointer shrink-0">
                           <Upload className="w-3.5 h-3.5" />
                           <input
                             type="file"
@@ -714,7 +666,7 @@ export default function DashboardCmsPage() {
                     <button
                       type="button"
                       onClick={() => deleteVideoItem(kind, item.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:bg-red-500/20 text-xs text-[var(--d-muted)] hover:text-red-400 cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:bg-red-500/20 text-[12px] text-[var(--d-muted)] hover:text-red-400 cursor-pointer transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Remove
@@ -727,175 +679,16 @@ export default function DashboardCmsPage() {
         </div>
       )}
 
-      {/* TAB 4: DESIGN WORKS (IMAGES & PORTFOLIO) */}
-      {activeTab === "designs" && (
-        <div className="flex flex-col gap-5">
-          <div className="p-5 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
-                Design Portfolio Grid
-              </span>
-              <h3 className="text-lg font-bold text-[var(--d-fg)] mt-0.5">
-                Manage Design Works & Upload Artwork Images ({content.designs.items.length})
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={addDesignItem}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--d-primary)] hover:bg-[var(--d-primary-hi)] text-[var(--d-ink)] text-xs font-bold cursor-pointer transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Design Work
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {content.designs.items.map((item) => (
-              <div
-                key={item.id}
-                className="p-5 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4"
-              >
-                {/* Preview */}
-                <div className="relative h-44 rounded-xl overflow-hidden border border-[var(--d-line)] bg-[var(--d-card2)] flex items-center justify-center">
-                  {item.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.imageUrl}
-                      alt={item.cap}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-center p-4">
-                      <div className="font-extrabold text-xl text-[var(--d-accent)] uppercase tracking-wider">
-                        {item.label}
-                      </div>
-                      <div className="font-mono text-[10px] text-[var(--d-muted)] mt-1">
-                        Preset style: {item.art}
-                      </div>
-                    </div>
-                  )}
-                  <span className="absolute bottom-2.5 left-2.5 font-mono text-[10px] px-2.5 py-1 rounded-full bg-black/75 text-white">
-                    {item.cap}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block font-mono text-[10px] text-[var(--d-muted)] mb-1">
-                      Caption Tag (Bottom Pill)
-                    </label>
-                    <input
-                      value={item.cap}
-                      onChange={(e) =>
-                        updateDesignItem(item.id, { cap: e.target.value })
-                      }
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs font-semibold text-[var(--d-fg)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-mono text-[10px] text-[var(--d-muted)] mb-1">
-                      Display Text / Label
-                    </label>
-                    <input
-                      value={item.label}
-                      onChange={(e) =>
-                        updateDesignItem(item.id, { label: e.target.value })
-                      }
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-mono text-[10px] text-[var(--d-muted)] mb-1">
-                      Grid Tile Size
-                    </label>
-                    <select
-                      value={item.cls}
-                      onChange={(e) =>
-                        updateDesignItem(item.id, {
-                          cls: e.target.value as DesignItem["cls"],
-                        })
-                      }
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
-                    >
-                      <option value="">Standard (1x1)</option>
-                      <option value="w-wide">Wide Banner (2x1)</option>
-                      <option value="w-a">Featured Large (2x2)</option>
-                    </select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block font-mono text-[10px] text-[var(--d-muted)] mb-1">
-                      Artwork Image (Upload or Paste URL)
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        value={item.imageUrl || ""}
-                        onChange={(e) =>
-                          updateDesignItem(item.id, { imageUrl: e.target.value })
-                        }
-                        placeholder="https://.../poster.jpg or Upload →"
-                        className="flex-1 px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
-                      />
-                      <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-xs text-[var(--d-accent)] cursor-pointer shrink-0">
-                        <Upload className="w-3.5 h-3.5" />
-                        Upload
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleImageUpload(file, (dataUrl) =>
-                                updateDesignItem(item.id, { imageUrl: dataUrl })
-                              );
-                            }
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-2 border-t border-[var(--d-line)]">
-                  {item.imageUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => updateDesignItem(item.id, { imageUrl: "" })}
-                      className="text-[11px] text-[var(--d-muted)] hover:text-[var(--d-fg)] cursor-pointer"
-                    >
-                      Clear custom image
-                    </button>
-                  ) : (
-                    <span className="text-[11px] text-[var(--d-muted)]">
-                      Using studio CSS artwork
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => deleteDesignItem(item.id)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:bg-red-500/20 text-xs text-[var(--d-muted)] hover:text-red-400 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* TAB 5: CLIENTS & STATS */}
       {activeTab === "clients" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4">
+          <div className="lg:col-span-7 p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
                   Client Marquee Logos
                 </span>
-                <h3 className="text-lg font-bold text-[var(--d-fg)]">
+                <h3 className="text-[15px] font-semibold text-[var(--d-fg)]">
                   Brands We&apos;ve Worked With ({content.clients.brands.length})
                 </h3>
               </div>
@@ -914,7 +707,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] text-xs font-bold cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] text-[12px] font-semibold cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add Brand
@@ -938,7 +731,7 @@ export default function DashboardCmsPage() {
                       }));
                       notifySaved();
                     }}
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] text-xs font-bold text-[var(--d-fg)]"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] text-[12px] font-semibold text-[var(--d-fg)]"
                   />
                   <select
                     value={b.style}
@@ -951,7 +744,7 @@ export default function DashboardCmsPage() {
                       }));
                       notifySaved();
                     }}
-                    className="px-2 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] font-mono text-xs text-[var(--d-accent)]"
+                    className="px-2 py-1.5 rounded-lg bg-[var(--d-card)] border border-[var(--d-line)] font-mono text-[12px] text-[var(--d-accent)]"
                   >
                     <option value="b1">Bold Display</option>
                     <option value="b2">Minimal Sans</option>
@@ -980,11 +773,11 @@ export default function DashboardCmsPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-5 p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4">
+          <div className="lg:col-span-5 p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-4">
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
               Key Studio Numbers
             </span>
-            <h3 className="text-lg font-bold text-[var(--d-fg)]">
+            <h3 className="text-[15px] font-semibold text-[var(--d-fg)]">
               3 Highlight Counters
             </h3>
             <div className="flex flex-col gap-3">
@@ -1008,7 +801,7 @@ export default function DashboardCmsPage() {
                         }));
                         notifySaved();
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card)] border border-[var(--d-line)] text-sm font-extrabold text-[var(--d-accent)]"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card)] border border-[var(--d-line)] text-[13px] font-semibold text-[var(--d-accent)]"
                     />
                   </div>
                   <div>
@@ -1026,7 +819,7 @@ export default function DashboardCmsPage() {
                         }));
                         notifySaved();
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--d-card)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                     />
                   </div>
                 </div>
@@ -1042,14 +835,14 @@ export default function DashboardCmsPage() {
           {content.services.list.map((svc, sIdx) => (
             <div
               key={svc.id}
-              className="p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col justify-between gap-4"
+              className="p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col justify-between gap-4"
             >
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
                     Service Pillar #{sIdx + 1}
                   </span>
-                  <label className="inline-flex items-center gap-2 text-xs text-[var(--d-muted)] cursor-pointer">
+                  <label className="inline-flex items-center gap-2 text-[12px] text-[var(--d-muted)] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={svc.hl}
@@ -1083,7 +876,7 @@ export default function DashboardCmsPage() {
                       }));
                       notifySaved();
                     }}
-                    className="w-full px-3.5 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm font-bold text-[var(--d-fg)]"
+                    className="w-full px-3.5 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] font-semibold text-[var(--d-fg)]"
                   />
                 </div>
 
@@ -1106,7 +899,7 @@ export default function DashboardCmsPage() {
                           }));
                           notifySaved();
                         }}
-                        className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                       />
                       <button
                         type="button"
@@ -1145,7 +938,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full py-2 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-xs font-semibold text-[var(--d-accent)] cursor-pointer"
+                className="w-full py-2 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-[12px] font-semibold text-[var(--d-accent)] cursor-pointer"
               >
                 + Add Deliverable
               </button>
@@ -1162,7 +955,7 @@ export default function DashboardCmsPage() {
               <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
                 Studio Roster
               </span>
-              <h3 className="text-lg font-bold text-[var(--d-fg)]">
+              <h3 className="text-[15px] font-semibold text-[var(--d-fg)]">
                 The Core Behind IDeCom ({content.team.members.length})
               </h3>
             </div>
@@ -1186,7 +979,7 @@ export default function DashboardCmsPage() {
                 }));
                 notifySaved();
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] text-xs font-bold cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] text-[12px] font-semibold cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Add Team Member
@@ -1230,7 +1023,7 @@ export default function DashboardCmsPage() {
                         }));
                         notifySaved();
                       }}
-                      className="w-full px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs font-bold text-[var(--d-fg)]"
+                      className="w-full px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-semibold text-[var(--d-fg)]"
                     />
                   </div>
                   <div>
@@ -1248,7 +1041,7 @@ export default function DashboardCmsPage() {
                         }));
                         notifySaved();
                       }}
-                      className="w-full px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-accent)]"
+                      className="w-full px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-accent)]"
                     />
                   </div>
                   <div>
@@ -1268,7 +1061,7 @@ export default function DashboardCmsPage() {
                           notifySaved();
                         }}
                         placeholder="Paste URL or Upload →"
-                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                       />
                       <label className="p-2 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-[var(--d-accent)] cursor-pointer">
                         <Upload className="w-3.5 h-3.5" />
@@ -1307,7 +1100,7 @@ export default function DashboardCmsPage() {
                     }));
                     notifySaved();
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-[var(--d-card2)] hover:bg-red-500/20 text-xs text-[var(--d-muted)] hover:text-red-400 cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-[var(--d-card2)] hover:bg-red-500/20 text-[12px] text-[var(--d-muted)] hover:text-red-400 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Remove Member
@@ -1320,12 +1113,12 @@ export default function DashboardCmsPage() {
 
       {/* TAB 8: CONTACT & FOOTER */}
       {activeTab === "contact" && (
-        <div className="p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-5 max-w-3xl">
+        <div className="p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-col gap-5 max-w-3xl">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
               CTA & Footer Inquiries
             </span>
-            <h3 className="text-lg font-bold text-[var(--d-fg)]">
+            <h3 className="text-[15px] font-semibold text-[var(--d-fg)]">
               WhatsApp Direct Chat, Contact Details & Bio
             </h3>
           </div>
@@ -1344,7 +1137,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm font-mono text-[var(--d-accent)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] font-mono text-[var(--d-accent)]"
               />
             </div>
             <div>
@@ -1360,7 +1153,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -1376,7 +1169,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -1392,7 +1185,7 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
           </div>
@@ -1411,7 +1204,7 @@ export default function DashboardCmsPage() {
                 }));
                 notifySaved();
               }}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
             />
           </div>
         </div>

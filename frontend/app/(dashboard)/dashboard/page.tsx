@@ -13,7 +13,7 @@ const WEEK = [
 const BARS = [[25, 8, 10], [24, 25, 24], [23, 30, 28], [22, 42, 24], [21, 24, 30], [20, 36, 20]];
 
 const Delta = ({ v, up = true }: { v: string; up?: boolean }) => (
-  <span className={`inline-flex items-center text-xs font-medium ${up ? "text-[#22A559]" : "text-[#F0605D]"}`}>
+  <span className={`inline-flex items-center text-[12px] font-medium ${up ? "text-[#22A559]" : "text-[#F0605D]"}`}>
     {up ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}{v}
   </span>
 );
@@ -48,9 +48,9 @@ export default function OverviewPage() {
         {stats.map((s) => (
           <Card key={s.label} className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-[var(--d-muted)]">{s.label}</div>
+              <div className="text-[13px] text-[var(--d-muted)]">{s.label}</div>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold">{s.value}</span>{s.d}
+                <span className="text-xl font-semibold">{s.value}</span>{s.d}
               </div>
             </div>
             <span className="w-16 h-16 rounded-2xl grid place-items-center bg-[var(--d-tint)] text-[var(--d-accent)]">
@@ -63,7 +63,7 @@ export default function OverviewPage() {
       <div className="grid gap-5 lg:grid-cols-2 mt-5">
         <Card>
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold">Statistics</h2><RangePill />
+            <h2 className="text-[15px] font-semibold">Statistics</h2><RangePill />
           </div>
           <BarChart data={WEEK} />
           <XLabels labels={DAYS} />
@@ -71,9 +71,9 @@ export default function OverviewPage() {
         </Card>
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Analytics</h2><RangePill />
+            <h2 className="text-[15px] font-semibold">Analytics</h2><RangePill />
           </div>
-          <div className="flex items-center gap-6 mb-4 text-sm">
+          <div className="flex items-center gap-6 mb-4 text-[13px]">
             <span className="flex items-center gap-2">
               <span className="w-8 h-8 rounded-lg grid place-items-center bg-[var(--d-tint)] text-[var(--d-accent)]"><ArrowUp className="w-4 h-4" /></span>
               ${income.toLocaleString()}
@@ -91,14 +91,14 @@ export default function OverviewPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_2fr] mt-5">
         <Card>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold">Sales</h2>
+            <h2 className="text-[15px] font-semibold">Sales</h2>
             <MoreHorizontal className="w-5 h-5 text-[var(--d-muted)]" />
           </div>
           <Donut value={leads.length} total={Math.max(leads.length + 2, 1)} label="Total" />
         </Card>
         <Card>
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <h2 className="text-lg font-semibold">Statistics</h2><Legend /><RangePill />
+            <h2 className="text-[15px] font-semibold">Statistics</h2><Legend /><RangePill />
           </div>
           <div className="flex flex-col gap-3">
             {BARS.map(([n, l, r]) => (

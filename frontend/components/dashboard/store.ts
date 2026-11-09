@@ -14,15 +14,6 @@ export type VideoItem = {
   thumbUrl?: string;
 };
 
-export type DesignItem = {
-  id: string;
-  cap: string;
-  cls: "" | "w-a" | "w-wide";
-  art: string;
-  label: string;
-  imageUrl?: string;
-};
-
 export type ServiceItem = {
   id: string;
   title: string;
@@ -50,7 +41,109 @@ export type CrmLead = {
   notes: string;
 };
 
+export type SocialPlatformKey =
+  | "whatsapp"
+  | "facebook"
+  | "instagram"
+  | "tiktok"
+  | "youtube"
+  | "linkedin"
+  | "x";
+
+export type SiteSettings = {
+  logoUrl: string;
+  showWordmarkWithLogo?: boolean;
+  socialLinks: Record<SocialPlatformKey, string>;
+};
+
+export const SOCIAL_PLATFORMS: {
+  key: SocialPlatformKey;
+  label: string;
+  placeholder: string;
+  hint: string;
+}[] = [
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    placeholder: "e.g. 8801516790830 or https://wa.me/8801516790830",
+    hint: "Phone number with country code or direct wa.me link",
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    placeholder: "https://facebook.com/yourpage",
+    hint: "Facebook page or profile URL",
+  },
+  {
+    key: "instagram",
+    label: "Instagram",
+    placeholder: "https://instagram.com/yourhandle",
+    hint: "Instagram profile URL",
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    placeholder: "https://tiktok.com/@yourhandle",
+    hint: "TikTok profile URL",
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    placeholder: "https://youtube.com/@yourchannel",
+    hint: "YouTube channel URL",
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    placeholder: "https://linkedin.com/company/yourstudio",
+    hint: "LinkedIn company or profile URL",
+  },
+  {
+    key: "x",
+    label: "X (Twitter)",
+    placeholder: "https://x.com/yourhandle",
+    hint: "X / Twitter profile URL",
+  },
+];
+
+export function resolveSocialHref(key: SocialPlatformKey | string, raw?: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed || trimmed === "#" || trimmed === "#contact") return "";
+  const lowerKey = key.toLowerCase();
+  if (lowerKey === "whatsapp") {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    if (trimmed.startsWith("wa.me/")) return `https://${trimmed}`;
+    const digits = trimmed.replace(/\D/g, "");
+    if (!digits) return "";
+    const normalized = digits.length === 11 && digits.startsWith("01") ? `88${digits}` : digits;
+    return `https://wa.me/${normalized}`;
+  }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export type ActiveSocialItem = {
+  key: SocialPlatformKey;
+  label: string;
+  href: string;
+  raw: string;
+};
+
+export function getActiveSocials(content: SiteContent): ActiveSocialItem[] {
+  const links = content.settings?.socialLinks ?? DEFAULT_SITE_SETTINGS.socialLinks;
+  const active: ActiveSocialItem[] = [];
+  for (const p of SOCIAL_PLATFORMS) {
+    const raw = links[p.key] ?? "";
+    const href = resolveSocialHref(p.key, raw);
+    if (href) {
+      active.push({ key: p.key, label: p.label, href, raw });
+    }
+  }
+  return active;
+}
+
 export type SiteContent = {
+  settings: SiteSettings;
   hero: {
     eyebrow: string;
     titleLine1: string;
@@ -84,12 +177,6 @@ export type SiteContent = {
     landscape: VideoItem[];
     vertical: VideoItem[];
   };
-  designs: {
-    eyebrow: string;
-    title: string;
-    em: string;
-    items: DesignItem[];
-  };
   team: {
     eyebrow: string;
     title: string;
@@ -110,7 +197,22 @@ export type SiteContent = {
   };
 };
 
+export const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  logoUrl: "",
+  showWordmarkWithLogo: false,
+  socialLinks: {
+    whatsapp: "8801516790830",
+    facebook: "https://facebook.com/idecomvisuals",
+    instagram: "https://instagram.com/idecomvisuals",
+    tiktok: "",
+    youtube: "",
+    linkedin: "",
+    x: "",
+  },
+};
+
 export const DEFAULT_SITE_CONTENT: SiteContent = {
+  settings: DEFAULT_SITE_SETTINGS,
   hero: {
     eyebrow: "Creative visual studio",
     titleLine1: "IDeCom",
@@ -214,24 +316,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       { id: "v-6", w: "Home", tag: "Reel", t: "Apartment walkthrough", d: "00:00:52", a: "#3a4a5a", b: "#0d1116", videoUrl: "", thumbUrl: "" },
     ],
   },
-  designs: {
-    eyebrow: "Latest designs",
-    title: "Design",
-    em: "works",
-    items: [
-      { id: "d-1", cls: "w-a", art: "art-can", cap: "Packaging · Fizz Lab soda", label: "FIZZ LAB", imageUrl: "" },
-      { id: "d-2", cls: "", art: "art-dance", cap: "Logo · Dance Pass", label: "DANCE PASS", imageUrl: "" },
-      { id: "d-3", cls: "", art: "art-root", cap: "Identity · Greenroot", label: "GREENROOT", imageUrl: "" },
-      { id: "d-4", cls: "w-wide", art: "art-sale", cap: "Social media · Sale campaign", label: "50% OFF · Monsoon sale", imageUrl: "" },
-      { id: "d-5", cls: "", art: "art-coffee", cap: "Poster · Roast & Co.", label: "Coffee Craft", imageUrl: "" },
-      { id: "d-6", cls: "", art: "art-noir", cap: "Product ad · Noir parfum", label: "NOIR", imageUrl: "" },
-      { id: "d-7", cls: "", art: "art-thumb", cap: "YouTube thumbnail", label: "I tried it 7 days!", imageUrl: "" },
-      { id: "d-8", cls: "", art: "art-match", cap: "Event poster", label: "Match Day · FRI 9 PM", imageUrl: "" },
-      { id: "d-9", cls: "w-wide", art: "art-travel", cap: "Travel campaign", label: "Summer escape", imageUrl: "" },
-      { id: "d-10", cls: "", art: "art-glow", cap: "Packaging · Serum label", label: "glow.", imageUrl: "" },
-      { id: "d-11", cls: "", art: "art-deck", cap: "Presentation design", label: "Q3 Growth Plan", imageUrl: "" },
-    ],
-  },
   team: {
     eyebrow: "Meet the team",
     title: "The core behind",
@@ -258,7 +342,6 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       { name: "Facebook", url: "#contact" },
       { name: "Instagram", url: "#contact" },
       { name: "YouTube", url: "#contact" },
-      { name: "Behance", url: "#contact" },
     ],
   },
 };
@@ -341,6 +424,21 @@ export const DEFAULT_CRM_LEADS: CrmLead[] = [
 const SITE_STORAGE_KEY = "idecom_cms_site_v1";
 const CRM_STORAGE_KEY = "idecom_crm_leads_v1";
 
+function mergeSiteContent(parsed: Partial<SiteContent>): SiteContent {
+  return {
+    ...DEFAULT_SITE_CONTENT,
+    ...parsed,
+    settings: {
+      ...DEFAULT_SITE_SETTINGS,
+      ...(parsed.settings ?? {}),
+      socialLinks: {
+        ...DEFAULT_SITE_SETTINGS.socialLinks,
+        ...(parsed.settings?.socialLinks ?? {}),
+      },
+    },
+  };
+}
+
 export function useStudioStore() {
   const [content, setContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT);
   const [leads, setLeads] = useState<CrmLead[]>(DEFAULT_CRM_LEADS);
@@ -350,7 +448,7 @@ export function useStudioStore() {
     try {
       const savedSite = localStorage.getItem(SITE_STORAGE_KEY);
       if (savedSite) {
-        setContent({ ...DEFAULT_SITE_CONTENT, ...JSON.parse(savedSite) });
+        setContent(mergeSiteContent(JSON.parse(savedSite)));
       }
       const savedCrm = localStorage.getItem(CRM_STORAGE_KEY);
       if (savedCrm) {
@@ -364,7 +462,7 @@ export function useStudioStore() {
     const onStorage = () => {
       try {
         const s = localStorage.getItem(SITE_STORAGE_KEY);
-        if (s) setContent({ ...DEFAULT_SITE_CONTENT, ...JSON.parse(s) });
+        if (s) setContent(mergeSiteContent(JSON.parse(s)));
         const c = localStorage.getItem(CRM_STORAGE_KEY);
         if (c) setLeads(JSON.parse(c));
       } catch {

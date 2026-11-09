@@ -1,7 +1,7 @@
 import { Shapes } from "@/components/home/Shapes";
 import Nav from "@/components/home/Nav";
 import Hero from "@/components/home/Hero";
-import { Clients, Services, Videos, Designs, Team, Cta, Footer } from "@/components/home/Sections";
+import { Clients, Services, Videos, Team, Cta, Footer } from "@/components/home/Sections";
 
 export default function HomePage() {
   return (
@@ -13,7 +13,6 @@ export default function HomePage() {
         <Clients />
         <Services />
         <Videos />
-        <Designs />
         <Team />
         <Cta />
       </main>

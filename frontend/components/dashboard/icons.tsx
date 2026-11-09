@@ -42,6 +42,9 @@ import {
   Box,
   Wallet3,
   Export,
+  Camera as CameraIcon,
+  Edit2,
+  Setting2,
 } from "iconsax-react";
 
 type P = { className?: string; strokeWidth?: number };
@@ -91,6 +94,9 @@ export const Briefcase = w(BriefcaseIcon);
 export const CheckCircle2 = w(TickCircle);
 export const Clock = w(ClockIcon);
 export const MessageSquare = w(Message);
+export const Camera = w(CameraIcon);
+export const Pencil = w(Edit2);
+export const Settings = w(Setting2);
 
 /* Plain tick (the kit's check mark) */
 export const Check: ComponentType<P> = ({ className = "" }) => (

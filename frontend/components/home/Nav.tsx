@@ -2,22 +2,38 @@
 import { useEffect, useState } from "react";
 import { Logo } from "./Shapes";
 
-const LINKS = [["Home", "top"], ["Services", "services"], ["Videos", "videos"], ["Designs", "designs"], ["Team", "team"]] as const;
+const LINKS = [["Home", "top"], ["Services", "services"], ["Videos", "videos"], ["Team", "team"]] as const;
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("top");
 
   useEffect(() => {
-    const io = new IntersectionObserver(
-      (es) => es.forEach((e) => e.isIntersecting && setActive(e.target.id)),
-      { rootMargin: "-45% 0px -50% 0px" },
-    );
-    ["services", "videos", "designs", "team"].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) io.observe(el);
-    });
-    return () => io.disconnect();
+    const sectionIds = ["services", "videos", "team"] as const;
+
+    const updateActive = () => {
+      if (window.scrollY < 180) {
+        setActive("top");
+        return;
+      }
+      const threshold = window.innerHeight * 0.38;
+      let current = "top";
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= threshold) {
+          current = id;
+        }
+      }
+      setActive(current);
+    };
+
+    updateActive();
+    window.addEventListener("scroll", updateActive, { passive: true });
+    window.addEventListener("resize", updateActive);
+    return () => {
+      window.removeEventListener("scroll", updateActive);
+      window.removeEventListener("resize", updateActive);
+    };
   }, []);
 
   return (
@@ -27,7 +43,22 @@ export default function Nav() {
           <Logo />
           <ul className="nav-links">
             {LINKS.map(([l, id]) => (
-              <li key={id}><a className={active === id ? "on" : ""} href={`#${id}`}>{l}</a></li>
+              <li key={id}>
+                <a
+                  className={active === id ? "on" : ""}
+                  href={`#${id}`}
+                  onClick={(e) => {
+                    setActive(id);
+                    if (id === "top") {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                      window.history.replaceState(null, "", window.location.pathname);
+                    }
+                  }}
+                >
+                  {l}
+                </a>
+              </li>
             ))}
           </ul>
           <a className="btn btn-lime" href="#contact">Contact now <span className="arr">→</span></a>

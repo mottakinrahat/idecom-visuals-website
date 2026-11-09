@@ -110,7 +110,7 @@ export default function DashboardCrmPage() {
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-muted)]">
               Total Pipeline Value
             </span>
-            <div className="text-2xl font-extrabold text-[var(--d-fg)] mt-1">
+            <div className="text-xl font-semibold text-[var(--d-fg)] mt-1">
               ${totalRevenue.toLocaleString()}
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function DashboardCrmPage() {
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-muted)]">
               Active Production Deals
             </span>
-            <div className="text-2xl font-extrabold text-[var(--d-accent)] mt-1">
+            <div className="text-xl font-semibold text-[var(--d-accent)] mt-1">
               ${activeValue.toLocaleString()}
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function DashboardCrmPage() {
             <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-muted)]">
               Completed & Delivered
             </span>
-            <div className="text-2xl font-extrabold text-[var(--d-fg)] mt-1">
+            <div className="text-xl font-semibold text-[var(--d-fg)] mt-1">
               ${wonValue.toLocaleString()}
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function DashboardCrmPage() {
                 key={stage}
                 type="button"
                 onClick={() => setFilterStage(stage)}
-                className={`px-3.5 py-2 rounded-full text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                   active
                     ? "bg-[var(--d-primary)] text-[var(--d-ink)]"
                     : "bg-[var(--d-card2)] text-[var(--d-muted)] hover:text-[var(--d-fg)] border border-[var(--d-line)]"
@@ -189,13 +189,13 @@ export default function DashboardCrmPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search client, brand, service..."
-              className="w-full pl-9 pr-4 py-2 rounded-full bg-[var(--d-card2)] border border-[var(--d-line)] text-xs text-[var(--d-fg)] placeholder:text-[var(--d-muted)] focus:outline-none focus:border-[var(--d-primary)]"
+              className="w-full pl-9 pr-4 py-2 rounded-full bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)] placeholder:text-[var(--d-muted)] focus:outline-none focus:border-[var(--d-primary)]"
             />
           </div>
           <button
             type="button"
             onClick={() => setShowAdd(!showAdd)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--d-primary)] hover:bg-[var(--d-primary-hi)] text-[var(--d-ink)] text-xs font-bold shrink-0 cursor-pointer transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--d-primary)] hover:bg-[var(--d-primary-hi)] text-[var(--d-ink)] text-[12px] font-semibold shrink-0 cursor-pointer transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Client Deal
@@ -207,21 +207,21 @@ export default function DashboardCrmPage() {
       {showAdd && (
         <form
           onSubmit={addLead}
-          className="p-6 rounded-3xl bg-[var(--d-card)] border border-[var(--d-primary)]/40 flex flex-col gap-4"
+          className="p-6 rounded-2xl bg-[var(--d-card)] border border-[var(--d-primary)]/40 flex flex-col gap-4"
         >
           <div className="flex items-center justify-between">
             <div>
               <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
                 New Studio Deal
               </span>
-              <h3 className="text-lg font-bold text-[var(--d-fg)]">
+              <h3 className="text-[15px] font-semibold text-[var(--d-fg)]">
                 Add Client or Production Inquiry
               </h3>
             </div>
             <button
               type="button"
               onClick={() => setShowAdd(false)}
-              className="text-xs text-[var(--d-muted)] hover:text-[var(--d-fg)] cursor-pointer"
+              className="text-[12px] text-[var(--d-muted)] hover:text-[var(--d-fg)] cursor-pointer"
             >
               Cancel
             </button>
@@ -237,7 +237,7 @@ export default function DashboardCrmPage() {
                 value={form.client}
                 onChange={(e) => setForm({ ...form, client: e.target.value })}
                 placeholder="e.g. Tariq Hasan"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -249,7 +249,7 @@ export default function DashboardCrmPage() {
                 value={form.company}
                 onChange={(e) => setForm({ ...form, company: e.target.value })}
                 placeholder="e.g. Urban Brew Café"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -261,7 +261,7 @@ export default function DashboardCrmPage() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="client@brand.com"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -272,7 +272,7 @@ export default function DashboardCrmPage() {
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="+880 17XX-XXXXXX"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -284,7 +284,7 @@ export default function DashboardCrmPage() {
                 onChange={(e) =>
                   setForm({ ...form, service: e.target.value as CrmLead["service"] })
                 }
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               >
                 {SERVICES.map((s) => (
                   <option key={s} value={s}>
@@ -303,7 +303,7 @@ export default function DashboardCrmPage() {
                 onChange={(e) =>
                   setForm({ ...form, budget: Number(e.target.value) || 0 })
                 }
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
             <div>
@@ -315,7 +315,7 @@ export default function DashboardCrmPage() {
                 onChange={(e) =>
                   setForm({ ...form, stage: e.target.value as CrmLead["stage"] })
                 }
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               >
                 {STAGES.map((st) => (
                   <option key={st} value={st}>
@@ -332,7 +332,7 @@ export default function DashboardCrmPage() {
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
               />
             </div>
           </div>
@@ -345,14 +345,14 @@ export default function DashboardCrmPage() {
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="e.g. 2 commercial films + 6 vertical reels + thumbnail design..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-sm text-[var(--d-fg)]"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] text-[var(--d-fg)]"
             />
           </div>
 
           <div className="flex justify-end gap-3">
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] text-xs font-bold cursor-pointer"
+              className="px-5 py-2.5 rounded-full bg-[var(--d-primary)] text-[var(--d-ink)] text-[12px] font-semibold cursor-pointer"
             >
               Save Client Deal
             </button>
@@ -370,7 +370,7 @@ export default function DashboardCrmPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="text-base font-bold text-[var(--d-fg)]">
+                  <h3 className="text-base font-semibold text-[var(--d-fg)]">
                     {lead.company}
                   </h3>
                   <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--d-primary)]/12 text-[var(--d-accent)] border border-[var(--d-primary)]/30">
@@ -378,13 +378,13 @@ export default function DashboardCrmPage() {
                     {lead.service}
                   </span>
                 </div>
-                <p className="text-xs text-[var(--d-muted)] mt-1">
+                <p className="text-[12px] text-[var(--d-muted)] mt-1">
                   Contact: <strong className="text-[var(--d-fg)]">{lead.client}</strong>
                 </p>
               </div>
 
               <div className="text-right">
-                <div className="font-mono text-lg font-extrabold text-[var(--d-accent)]">
+                <div className="font-mono text-[15px] font-semibold text-[var(--d-accent)]">
                   ${lead.budget.toLocaleString()}
                 </div>
                 <div className="inline-flex items-center gap-1 font-mono text-[11px] text-[var(--d-muted)]">
@@ -394,7 +394,7 @@ export default function DashboardCrmPage() {
               </div>
             </div>
 
-            <p className="text-xs text-[var(--d-fg)] bg-[var(--d-card2)]/80 p-3 rounded-xl border border-[var(--d-line)]">
+            <p className="text-[12px] text-[var(--d-fg)] bg-[var(--d-card2)]/80 p-3 rounded-xl border border-[var(--d-line)]">
               {lead.notes || "No project notes added."}
             </p>
 
@@ -405,7 +405,7 @@ export default function DashboardCrmPage() {
                     href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`}
                     target="_blank"
                     rel="noopener"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-[var(--d-accent)]" />
                     WhatsApp
@@ -414,7 +414,7 @@ export default function DashboardCrmPage() {
                 {lead.email && (
                   <a
                     href={`mailto:${lead.email}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-xs text-[var(--d-fg)]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--d-card2)] hover:border-[var(--d-primary)] border border-[var(--d-line)] text-[12px] text-[var(--d-fg)]"
                   >
                     <Mail className="w-3.5 h-3.5 text-[var(--d-muted)]" />
                     Email
@@ -432,7 +432,7 @@ export default function DashboardCrmPage() {
                   onChange={(e) =>
                     changeStage(lead.id, e.target.value as CrmLead["stage"])
                   }
-                  className="px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] font-mono text-xs text-[var(--d-accent)] focus:outline-none focus:border-[var(--d-primary)] cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] font-mono text-[12px] text-[var(--d-accent)] focus:outline-none focus:border-[var(--d-primary)] cursor-pointer"
                 >
                   {STAGES.map((st) => (
                     <option key={st} value={st}>
