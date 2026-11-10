@@ -94,5 +94,11 @@ export const api = {
     fd.append("file", file);
     return request<{ url: string }>("/uploads/image", { method: "POST", body: fd });
   },
+  /** MP4 / WebM / MOV up to 100 MB — stored on Cloudflare R2 when the backend has it configured. */
+  uploadVideo: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request<{ url: string }>("/uploads/video", { method: "POST", body: fd });
+  },
 };
 

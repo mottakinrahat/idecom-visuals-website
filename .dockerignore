@@ -1,0 +1,26 @@
+# Build context is the monorepo root. Keep it small and keep secrets / runtime data out of images.
+.git
+.github
+.claude
+.vscode
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+
+# secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# runtime data lives in Docker volumes, never in the image
+backend/data
+backend/uploads
+
+# deployment files are not needed inside the images
+deploy
+docker-compose*.yml
+*.md

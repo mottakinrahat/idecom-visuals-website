@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { API_URL } from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch, clearError, reportError } from "./http";
 
 export type PackageIconType = "camera" | "location" | "user" | "store";
 
@@ -212,149 +212,118 @@ export const INITIAL_PACKAGES: StudioPackage[] = [
   },
 ];
 
-const PKG_STORAGE_KEY = "idecom_studio_packages_v2";
-const PKG_FOOTER_KEY = "idecom_studio_packages_footer_v1";
+const LEGACY_FOOTER_KEY = "idecom_studio_packages_footer_v1"; // older versions kept these texts in this browser
+const LEGACY_PACKAGES_KEY = "idecom_studio_packages_v2";
 
+/** Packages live in the backend (table packages); the page texts (banner / WhatsApp) in kv_store "package-meta". */
 export function usePackagesStore() {
-  const [packages, setPackages] = useState<StudioPackage[]>(INITIAL_PACKAGES);
+  const [packages, setPackages] = useState<StudioPackage[]>([]);
   const [meta, setMeta] = useState<PackageFooterConfig>(DEFAULT_PACKAGE_FOOTER);
   const [loading, setLoading] = useState(true);
-
-  const persistLocal = (next: StudioPackage[]) => {
-    try {
-      localStorage.setItem(PKG_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-  };
+  const ready = useRef(false);
+  const metaTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     let active = true;
-    try {
-      const savedMeta = localStorage.getItem(PKG_FOOTER_KEY);
-      if (savedMeta) setMeta({ ...DEFAULT_PACKAGE_FOOTER, ...JSON.parse(savedMeta) });
-      const savedPkgs = localStorage.getItem(PKG_STORAGE_KEY);
-      if (savedPkgs) {
-        const parsed = JSON.parse(savedPkgs);
-        if (Array.isArray(parsed) && parsed.length > 0 && "tierName" in parsed[0]) {
-          setPackages(parsed);
+    (async () => {
+      try {
+        const [rows, m] = await Promise.all([
+          apiFetch<StudioPackage[]>("/packages"),
+          apiFetch<{ data: Partial<PackageFooterConfig> | null }>("/content/package-meta"),
+        ]);
+        let footer = { ...DEFAULT_PACKAGE_FOOTER, ...(m.data ?? {}) };
+        // one-time move of texts saved in this browser
+        try {
+          const raw = localStorage.getItem(LEGACY_FOOTER_KEY);
+          if (raw && !m.data) {
+            footer = { ...DEFAULT_PACKAGE_FOOTER, ...JSON.parse(raw) };
+            await apiFetch("/content/package-meta", { method: "PUT", body: { data: footer } });
+          }
+          if (raw && !m.data) localStorage.removeItem(LEGACY_FOOTER_KEY);
+          localStorage.removeItem(LEGACY_PACKAGES_KEY); // old cache; the database is the source now
+        } catch {
+          // storage unavailable — ignore
         }
-      }
-    } catch {
-      // ignore
-    }
-
-    fetch(`${API_URL}/packages`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((remote: StudioPackage[] | null) => {
         if (!active) return;
-        if (
-          Array.isArray(remote) &&
-          remote.length > 0 &&
-          "tierName" in remote[0]
-        ) {
-          setPackages(remote);
-          persistLocal(remote);
-        }
-      })
-      .catch(() => {
-        // fallback to localStorage / INITIAL_PACKAGES
-      })
-      .finally(() => {
+        ready.current = true;
+        setPackages(rows);
+        setMeta(footer);
+        clearError();
+      } catch (e) {
+        reportError((e as Error).message);
+      } finally {
         if (active) setLoading(false);
-      });
-
+      }
+    })();
     return () => {
       active = false;
     };
   }, []);
 
-  const savePackage = useCallback(async (pkg: StudioPackage, isNew: boolean) => {
-    setPackages((prev) => {
-      const next = isNew
-        ? [...prev, pkg]
-        : prev.map((p) => (p.id === pkg.id ? pkg : p));
-      persistLocal(next);
-      return next;
-    });
+  const payload = (pkg: StudioPackage) => ({
+    number: pkg.number,
+    title: pkg.title,
+    subtitle: pkg.subtitle,
+    iconType: pkg.iconType,
+    imageUrl: pkg.imageUrl,
+    tierName: pkg.tierName,
+    highlighted: pkg.highlighted,
+    price: pkg.price,
+    duration: pkg.duration,
+    features: pkg.features,
+  });
 
+  const savePackage = useCallback(async (pkg: StudioPackage, isNew: boolean) => {
+    if (!ready.current) return reportError("Not connected to the database, so this package was not saved.");
     try {
-      const res = await fetch(
-        isNew ? `${API_URL}/packages` : `${API_URL}/packages/${pkg.id}`,
-        {
-          method: isNew ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            number: pkg.number,
-            title: pkg.title,
-            subtitle: pkg.subtitle,
-            iconType: pkg.iconType,
-            imageUrl: pkg.imageUrl,
-            tierName: pkg.tierName,
-            highlighted: pkg.highlighted,
-            price: pkg.price,
-            duration: pkg.duration,
-            features: pkg.features,
-          }),
-        }
-      );
-      if (res.ok) {
-        const saved: StudioPackage = await res.json();
-        setPackages((prev) => {
-          const next = prev.map((p) => (p.id === pkg.id ? saved : p));
-          persistLocal(next);
-          return next;
-        });
-      }
-    } catch {
-      // localStorage already updated
+      const saved = await apiFetch<StudioPackage>(isNew ? "/packages" : `/packages/${pkg.id}`, {
+        method: isNew ? "POST" : "PUT",
+        body: payload(pkg),
+      });
+      setPackages((prev) => (isNew ? [...prev, saved] : prev.map((p) => (p.id === pkg.id ? saved : p))));
+      clearError();
+    } catch (e) {
+      reportError(`Could not save the package: ${(e as Error).message}`);
     }
   }, []);
 
   const deletePackage = useCallback(async (id: string) => {
-    setPackages((prev) => {
-      const next = prev.filter((p) => p.id !== id);
-      persistLocal(next);
-      return next;
-    });
+    if (!ready.current) return reportError("Not connected to the database.");
     try {
-      await fetch(`${API_URL}/packages/${id}`, { method: "DELETE" });
-    } catch {
-      // ignore
+      await apiFetch(`/packages/${id}`, { method: "DELETE" });
+      setPackages((prev) => prev.filter((p) => p.id !== id));
+      clearError();
+    } catch (e) {
+      reportError(`Could not delete the package: ${(e as Error).message}`);
     }
   }, []);
 
   const resetPackages = useCallback(async () => {
-    setPackages(INITIAL_PACKAGES);
-    setMeta(DEFAULT_PACKAGE_FOOTER);
-    persistLocal(INITIAL_PACKAGES);
+    if (!ready.current) return reportError("Not connected to the database.");
     try {
-      localStorage.removeItem(PKG_FOOTER_KEY);
-      await fetch(`${API_URL}/packages/reset`, { method: "POST" });
-    } catch {
-      // ignore
+      const rows = await apiFetch<StudioPackage[]>("/packages/reset", { method: "POST" });
+      await apiFetch("/content/package-meta", { method: "PUT", body: { data: DEFAULT_PACKAGE_FOOTER } });
+      setPackages(rows);
+      setMeta(DEFAULT_PACKAGE_FOOTER);
+      clearError();
+    } catch (e) {
+      reportError(`Could not reset: ${(e as Error).message}`);
     }
   }, []);
 
   const updateMeta = useCallback((patch: Partial<PackageFooterConfig>) => {
+    if (!ready.current) return reportError("Not connected to the database, so this change was not saved.");
     setMeta((prev) => {
       const next = { ...prev, ...patch };
-      try {
-        localStorage.setItem(PKG_FOOTER_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
+      clearTimeout(metaTimer.current);
+      metaTimer.current = setTimeout(() => {
+        apiFetch("/content/package-meta", { method: "PUT", body: { data: next } })
+          .then(clearError)
+          .catch((e: Error) => reportError(`Could not save to the database: ${e.message}`));
+      }, 800);
       return next;
     });
   }, []);
 
-  return {
-    packages,
-    meta,
-    loading,
-    savePackage,
-    deletePackage,
-    resetPackages,
-    updateMeta,
-  };
+  return { packages, meta, loading, savePackage, deletePackage, resetPackages, updateMeta };
 }

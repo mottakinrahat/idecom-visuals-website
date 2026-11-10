@@ -103,26 +103,35 @@ export function validateName(raw: string): string | undefined {
   return undefined;
 }
 
+export function normalizeBangladeshPhone(raw: string): string {
+  const v = raw.trim().replace(/[\s-]/g, "");
+  if (v.startsWith("+880")) return v.slice(3);
+  if (v.startsWith("880")) return v.slice(2);
+  if (v.startsWith("+88")) return v.slice(3);
+  return v;
+}
+
 export function validateBangladeshPhone(raw: string): string | undefined {
-  const v = raw.trim();
+  const v = raw.trim().replace(/[\s-]/g, "");
   if (!v) return "Please enter your phone number";
-  if (/^(\+?880|88)/.test(v)) {
-    return "Remove +88 — enter the 11-digit number starting with 01 (e.g. 01712345678)";
+
+  // Normalize BD country code prefixes (+880, 880, +88)
+  const norm = normalizeBangladeshPhone(v);
+
+  if (/[^\d]/.test(norm)) {
+    return "Phone number must contain digits only (e.g. +8801712345678 or 01712345678)";
   }
-  if (/[^\d]/.test(v)) {
-    return "Phone number must contain digits only without spaces or symbols (e.g. 01712345678)";
+  if (!norm.startsWith("01")) {
+    return "Bangladesh mobile number must start with 01 (e.g. 01712345678 or +8801712345678)";
   }
-  if (!v.startsWith("01")) {
-    return "Bangladesh mobile number must start with 01 (e.g. 01712345678)";
-  }
-  if (v.length >= 3 && !/^01[3-9]/.test(v)) {
+  if (norm.length >= 3 && !/^01[3-9]/.test(norm)) {
     return "Enter a valid Bangladesh operator prefix (013–019)";
   }
-  if (v.length !== 11) {
-    return `Phone number must be 11 digits (currently ${v.length} digit${v.length === 1 ? "" : "s"})`;
+  if (norm.length !== 11) {
+    return `Phone number must be 11 digits (e.g. 01712345678 or +8801712345678)`;
   }
-  if (!/^01[3-9]\d{8}$/.test(v)) {
-    return "Enter a valid 11-digit Bangladesh number (e.g. 01712345678)";
+  if (!/^01[3-9]\d{8}$/.test(norm)) {
+    return "Enter a valid Bangladesh phone number (e.g. 01712345678 or +8801712345678)";
   }
   return undefined;
 }
@@ -220,8 +229,7 @@ export function validateCategory(raw: string): string | undefined {
 
 export function validateDescription(raw: string): string | undefined {
   const v = raw.trim();
-  if (!v) return "Please tell us what you need";
-  if (v.length < 10) return "Tell us a little more (at least 10 characters)";
+  if (!v) return undefined; // optional
   if (v.length > 2000) return "Description must be 2000 characters or less";
   return undefined;
 }
@@ -283,7 +291,7 @@ export async function submitInquiry(v: InquiryForm): Promise<void> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: v.name.trim(),
-        phone: v.phone.trim(),
+        phone: normalizeBangladeshPhone(v.phone),
         email: v.email.trim(),
         facebookUrl: withProtocol(v.facebookUrl),
         website: withProtocol(v.website),

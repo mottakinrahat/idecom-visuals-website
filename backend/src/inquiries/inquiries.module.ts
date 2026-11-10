@@ -7,6 +7,7 @@ import {
   HttpCode,
   Injectable,
   Module,
+  OnModuleInit,
   NotFoundException,
   Param,
   Patch,
@@ -24,7 +25,9 @@ import {
   MinLength,
 } from 'class-validator';
 import { randomUUID } from 'crypto';
-import { JsonCollection, dataPath } from '../equipment/store/data-store';
+import { DbService } from '../db/db.service';
+import { PgCollection, TableSpec } from '../db/pg-collection';
+import { dataPath } from '../equipment/store/data-store';
 
 export const INQUIRY_CATEGORIES = [
   'E-commerce',
@@ -256,11 +259,18 @@ export class CreateInquiryDto {
   })
   name!: string;
 
-  @Transform(trim)
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    const v = value.trim().replace(/[\s-]/g, '');
+    if (v.startsWith('+880')) return v.slice(3);
+    if (v.startsWith('880')) return v.slice(2);
+    if (v.startsWith('+88')) return v.slice(3);
+    return v;
+  })
   @IsString()
   @Matches(/^01[3-9]\d{8}$/, {
     message:
-      'Enter a valid 11-digit Bangladesh phone number (e.g. 01712345678)',
+      'Enter a valid Bangladesh phone number (e.g. 01712345678 or +8801712345678)',
   })
   phone!: string;
 
@@ -286,11 +296,11 @@ export class CreateInquiryDto {
   })
   category!: string;
 
-  @Transform(trim)
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
-  @MinLength(10, { message: 'Tell us a little more (at least 10 characters)' })
   @MaxLength(2000)
-  description!: string;
+  description?: string;
 }
 
 export class VerifyInquiryDto {
@@ -317,9 +327,38 @@ export class RejectInquiryDto {
   reason?: string;
 }
 
+const INQUIRY_SPEC: TableSpec<Inquiry> = {
+  id: 'text',
+  name: 'text',
+  phone: 'text',
+  email: 'text',
+  facebookUrl: 'text',
+  website: 'text',
+  category: 'text',
+  description: 'text',
+  status: 'text',
+  createdAt: 'ts',
+  verifiedAt: 'ts',
+  verifyNote: 'text',
+  acceptedAt: 'ts',
+  leadId: 'text',
+  rejectedAt: 'ts',
+  rejectReason: 'text',
+};
+
 @Injectable()
-export class InquiriesService {
-  private readonly col = new JsonCollection<Inquiry>(dataPath('inquiries'));
+export class InquiriesService implements OnModuleInit {
+  private readonly col: PgCollection<Inquiry>;
+
+  constructor(db: DbService) {
+    this.col = new PgCollection<Inquiry>(db.pool, 'inquiries', INQUIRY_SPEC, {
+      legacyFile: dataPath('inquiries'),
+    });
+  }
+
+  async onModuleInit() {
+    await this.col.ready;
+  }
 
   list(): Inquiry[] {
     return [...this.col.all()].sort((a, b) =>
@@ -336,7 +375,7 @@ export class InquiriesService {
       facebookUrl: dto.facebookUrl,
       website: dto.website ?? '',
       category: dto.category,
-      description: dto.description,
+      description: dto.description ?? '',
       status: 'pending',
       createdAt: new Date().toISOString(),
     };

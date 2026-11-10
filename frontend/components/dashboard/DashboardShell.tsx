@@ -23,6 +23,7 @@ import {
 } from "@/components/dashboard/icons";
 import { Shapes, Logo } from "@/components/home/Shapes";
 import { useTheme } from "./theme";
+import { useServerError } from "@/lib/http";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -40,6 +41,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [theme, toggleTheme] = useTheme();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const serverError = useServerError();
   const [pendingCount, setPendingCount] = useState(0);
 
   // badge on "Requests": how many are waiting for a phone call
@@ -156,7 +158,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </div>
         </header>
 
-        <main className="flex-1 p-5 lg:p-8 w-full max-w-[1440px] mx-auto">{children}</main>
+        <main className="flex-1 p-5 lg:p-8 w-full max-w-[1440px] mx-auto">
+          {serverError && (
+            <div role="alert" className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[13px] text-red-500">
+              {serverError}
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   );

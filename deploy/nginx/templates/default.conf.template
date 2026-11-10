@@ -1,0 +1,79 @@
+# Rendered by the nginx image's envsubst — only ${DOMAIN} is substituted.
+
+# Light spam protection for the public contact form: POSTs to /api/inquiries only, 10 requests/minute per IP.
+map $request_method $inquiry_limit_key {
+    POST    $binary_remote_addr;
+    default "";
+}
+limit_req_zone $inquiry_limit_key zone=inquiries:10m rate=10r/m;
+
+upstream frontend_app { server frontend:3000; keepalive 16; }
+upstream backend_app  { server backend:5000;  keepalive 16; }
+
+# ---------- HTTP: ACME challenge + redirect to HTTPS ----------
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location = /healthz { access_log off; return 200 "ok\n"; }
+    location / { return 301 https://${DOMAIN}$request_uri; }
+}
+
+# ---------- HTTPS ----------
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml image/svg+xml;
+    gzip_min_length 1024;
+
+    client_max_body_size 10m;   # image uploads
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Next.js has its OWN /api routes (Facebook link helpers) — these two must stay on the frontend
+    location ^~ /api/resolve { proxy_pass http://frontend_app; }
+    location ^~ /api/thumb   { proxy_pass http://frontend_app; }
+
+    # contact form (rate limited)
+    location = /api/inquiries {
+        limit_req zone=inquiries burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://backend_app;
+    }
+
+    # uploads: videos go up to 100 MB (the API enforces its own limits per type)
+    location /api/uploads/ {
+        client_max_body_size 105m;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_pass http://backend_app;
+    }
+
+    # NestJS API (global prefix /api) and uploaded images
+    location /api/     { proxy_pass http://backend_app; }
+    location /uploads/ { proxy_pass http://backend_app; expires 7d; }
+
+    # everything else → Next.js
+    location / { proxy_pass http://frontend_app; }
+}

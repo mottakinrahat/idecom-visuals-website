@@ -6,6 +6,7 @@ import {
   HttpCode,
   Injectable,
   Module,
+  OnModuleInit,
   NotFoundException,
   Param,
   Patch,
@@ -23,7 +24,9 @@ import {
   MinLength,
 } from 'class-validator';
 import { randomUUID } from 'crypto';
-import { JsonCollection, dataPath } from '../equipment/store/data-store';
+import { DbService } from '../db/db.service';
+import { PgCollection, TableSpec } from '../db/pg-collection';
+import { dataPath } from '../equipment/store/data-store';
 
 export interface StudioPackage {
   id: string;
@@ -262,20 +265,35 @@ export class UpsertPackageDto {
   features!: string[];
 }
 
-@Injectable()
-export class PackagesService {
-  private readonly col = new JsonCollection<StudioPackage>(
-    dataPath('packages'),
-  );
+const PACKAGE_SPEC: TableSpec<StudioPackage> = {
+  id: 'text',
+  number: 'text',
+  title: 'text',
+  subtitle: 'text',
+  iconType: 'text',
+  imageUrl: 'text',
+  tierName: 'text',
+  highlighted: 'bool',
+  price: 'num',
+  duration: 'text',
+  features: 'json',
+  updatedAt: 'ts',
+};
 
-  constructor() {
-    const existing = this.col.all() as unknown as Record<string, unknown>[];
-    if (
-      existing.length === 0 ||
-      existing.some((item) => Array.isArray(item.tiers))
-    ) {
-      void this.col.save(INITIAL_PACKAGES);
-    }
+@Injectable()
+export class PackagesService implements OnModuleInit {
+  private readonly col: PgCollection<StudioPackage>;
+
+  constructor(db: DbService) {
+    // first start: imports the old packages.json if present, otherwise the default packages (once)
+    this.col = new PgCollection<StudioPackage>(db.pool, 'packages', PACKAGE_SPEC, {
+      legacyFile: dataPath('packages'),
+      seed: INITIAL_PACKAGES,
+    });
+  }
+
+  async onModuleInit() {
+    await this.col.ready;
   }
 
   list(): StudioPackage[] {

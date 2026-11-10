@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from "react";
 import { parseVideo } from "@/lib/embed";
 import Thumb from "./Thumb";
 import ContactForm from "./ContactForm";
+import { usePortfolioVideos, toCard } from "@/lib/portfolio";
 import ReelsViewer, { type Reel } from "./ReelsViewer";
 import { Logo, Marquee, SocialIcon } from "./Shapes";
 import {
@@ -103,7 +104,7 @@ const VidCard = ({ x, ratio, onOpen }: { x: VideoItem; ratio: string; onOpen: ()
         />
       ) : null}
       <span className="vid-word">{x.w}</span>
-      <span className="vid-top"><span className="chip">{ratio === "9:16" && <svg className="reel-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><path d="M3 9h18M8.5 3l3 6M14 3l3 6" /><path d="M10.5 13.5v4l3.5-2z" fill="currentColor" /></svg>}{ratio !== "9:16" && x.tag}</span>{ratio !== "9:16" && <span className="chip">{ratio}</span>}</span>
+      <span className="vid-top"><span className="chip">{ratio === "9:16" && <svg className="reel-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><path d="M3 9h18M8.5 3l3 6M14 3l3 6" /><path d="M10.5 13.5v4l3.5-2z" fill="currentColor" /></svg>}{ratio !== "9:16" && x.tag}</span></span>
       <span className="play" />
       <span className="vid-bot"><b>{x.t}</b><span>{x.d}</span></span>
     </a>
@@ -114,10 +115,15 @@ export function Videos() {
   const { content } = useStudioStore();
   const [open, setOpen] = useState<number | null>(null);
 
-  // reels playlist: every video that has a link (vertical first, then landscape)
+  // videos come from the backend portfolio table: videoType "video" → 16:9 row, "reel" → 9:16 row
+  const { videos, failed } = usePortfolioVideos();
+  const landscape = failed ? content.videos.landscape : (videos ?? []).filter((v) => v.videoType === "video").map(toCard);
+  const vertical = failed ? content.videos.vertical : (videos ?? []).filter((v) => v.videoType === "reel").map(toCard);
+
+  // reels playlist: every video that has a link (reels first, then videos)
   const reels: Reel[] = [
-    ...content.videos.vertical.map((x) => ({ x, vertical: true })),
-    ...content.videos.landscape.map((x) => ({ x, vertical: false })),
+    ...vertical.map((x) => ({ x, vertical: true })),
+    ...landscape.map((x) => ({ x, vertical: false })),
   ]
     .filter(({ x }) => parseVideo(x.videoUrl))
     .map(({ x, vertical }) => ({ id: x.id, title: x.t, tag: x.tag, videoUrl: x.videoUrl!, thumbUrl: x.thumbUrl, vertical }));
@@ -127,12 +133,16 @@ export function Videos() {
     <section className="sec" id="videos">
       <div className="wrap">
         <Head eyebrow={content.videos.eyebrow} title={content.videos.title} em={content.videos.em} />
-        <Marquee className="reel-row land rev" style={v({ "--dur": "32s" })}>
-          {content.videos.landscape.map((x) => <VidCard key={x.id} x={x} ratio="16:9" onOpen={() => openFor(x.id)} />)}
-        </Marquee>
-        <Marquee className="reel-row vert" style={v({ "--dur": "36s" })}>
-          {content.videos.vertical.map((x) => <VidCard key={x.id} x={x} ratio="9:16" onOpen={() => openFor(x.id)} />)}
-        </Marquee>
+        {landscape.length > 0 && (
+          <Marquee className="reel-row land rev" style={v({ "--dur": "32s" })}>
+            {landscape.map((x) => <VidCard key={x.id} x={x} ratio="16:9" onOpen={() => openFor(x.id)} />)}
+          </Marquee>
+        )}
+        {vertical.length > 0 && (
+          <Marquee className="reel-row vert" style={v({ "--dur": "36s" })}>
+            {vertical.map((x) => <VidCard key={x.id} x={x} ratio="9:16" onOpen={() => openFor(x.id)} />)}
+          </Marquee>
+        )}
         <div className="center">
           <button type="button" className="btn btn-lime" onClick={() => reels.length && setOpen(0)}>Watch as reels <span className="arr">→</span></button>
         </div>

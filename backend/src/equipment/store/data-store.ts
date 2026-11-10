@@ -1,60 +1,56 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { existsSync, mkdirSync, readFileSync } from 'fs';
-import { rename, writeFile } from 'fs/promises';
-import { dirname, join } from 'path';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { join } from 'path';
+import { DbService } from '../../db/db.service';
+import { PgCollection, TableSpec } from '../../db/pg-collection';
+import type { Booking } from '../entities/booking.entity';
+import type { Equipment } from '../entities/equipment.entity';
 
-/**
- * Tiny JSON-file collection. Keeps the project dependency-free (no database
- * needed to run), while the service talks only to this small interface so it
- * can later be swapped for TypeORM/Postgres without touching business logic.
- * Writes are serialised and atomic (write temp file → rename).
- */
-export class JsonCollection<T extends { id: string }> {
-  private items: T[] = [];
-  private queue: Promise<void> = Promise.resolve();
-  private readonly logger = new Logger(JsonCollection.name);
-
-  constructor(private readonly file: string) {
-    mkdirSync(dirname(file), { recursive: true });
-    if (existsSync(file)) {
-      try {
-        this.items = JSON.parse(readFileSync(file, 'utf8')) as T[];
-      } catch (err) {
-        this.logger.error(`Could not read ${file}, starting empty`, err as Error);
-      }
-    }
-  }
-
-  all(): T[] {
-    return this.items;
-  }
-
-  find(id: string): T | undefined {
-    return this.items.find((i) => i.id === id);
-  }
-
-  async save(next: T[]): Promise<void> {
-    this.items = next;
-    const snapshot = JSON.stringify(next, null, 2);
-    this.queue = this.queue.then(async () => {
-      const tmp = `${this.file}.tmp`;
-      await writeFile(tmp, snapshot, 'utf8');
-      await rename(tmp, this.file);
-    });
-    await this.queue;
-  }
-}
-
+/** Where the old JSON files lived — they are imported into PostgreSQL once on first start. */
 export const dataPath = (name: string) =>
   join(process.cwd(), 'data', `${name}.json`);
 
-@Injectable()
-export class DataStore {
-  equipment = new JsonCollection<import('../entities/equipment.entity').Equipment>(
-    dataPath('equipment'),
-  );
-  bookings = new JsonCollection<import('../entities/booking.entity').Booking>(
-    dataPath('bookings'),
-  );
-}
+export const EQUIPMENT_SPEC: TableSpec<Equipment> = {
+  id: 'text',
+  name: 'text',
+  description: 'text',
+  imageUrl: 'text',
+  pricePerHour: 'num',
+  status: 'text',
+  createdAt: 'ts',
+  updatedAt: 'ts',
+};
 
+export const BOOKING_SPEC: TableSpec<Booking> = {
+  id: 'text',
+  equipmentId: 'text',
+  customerName: 'text',
+  customerPhone: 'text',
+  note: 'text',
+  startAt: 'ts',
+  endAt: 'ts',
+  durationMinutes: 'int',
+  pricePerHour: 'num',
+  totalPrice: 'num',
+  status: 'text',
+  createdAt: 'ts',
+  updatedAt: 'ts',
+};
+
+@Injectable()
+export class DataStore implements OnModuleInit {
+  readonly equipment: PgCollection<Equipment>;
+  readonly bookings: PgCollection<Booking>;
+
+  constructor(db: DbService) {
+    this.equipment = new PgCollection<Equipment>(db.pool, 'equipment', EQUIPMENT_SPEC, {
+      legacyFile: dataPath('equipment'),
+    });
+    this.bookings = new PgCollection<Booking>(db.pool, 'bookings', BOOKING_SPEC, {
+      legacyFile: dataPath('bookings'),
+    });
+  }
+
+  async onModuleInit() {
+    await Promise.all([this.equipment.ready, this.bookings.ready]);
+  }
+}

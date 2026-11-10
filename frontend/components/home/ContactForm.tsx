@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import CategorySelect from "./CategorySelect";
 import {
   EMPTY_FORM,
+  normalizeBangladeshPhone,
   submitInquiry,
   validateInquiry,
   validateInquiryField,
@@ -208,18 +209,17 @@ export default function ContactForm() {
           id="phone"
           label="Phone number"
           error={errors.phone}
-          statusKind={!errors.phone && v.phone.trim().length === 11 ? "ok" : undefined}
-          statusMsg={!errors.phone && v.phone.trim().length === 11 ? "✓ Valid" : undefined}
-          hint="11-digit Bangladesh number (e.g. 01712345678)"
+          statusKind={!errors.phone && normalizeBangladeshPhone(v.phone).length === 11 && /^01[3-9]\d{8}$/.test(normalizeBangladeshPhone(v.phone)) ? "ok" : undefined}
+          statusMsg={!errors.phone && normalizeBangladeshPhone(v.phone).length === 11 && /^01[3-9]\d{8}$/.test(normalizeBangladeshPhone(v.phone)) ? "✓ Valid" : undefined}
         >
           <input
             id="cf-phone"
             type="tel"
-            inputMode="numeric"
+            inputMode="tel"
             value={v.phone}
             onChange={set("phone")}
             onBlur={blur("phone")}
-            placeholder="01XXXXXXXXX"
+            placeholder="+8801XXXXXXXXX"
             autoComplete="tel"
             aria-invalid={!!errors.phone}
           />
@@ -281,7 +281,7 @@ export default function ContactForm() {
         </Field>
 
         <div className="cf-wide">
-          <Field id="description" label="What do you need?" error={errors.description} hint="For example: product videos for my online clothing store, 10 reels a month.">
+          <Field id="description" label="What do you need?" optional error={errors.description} hint="For example: product videos for my online clothing store, 10 reels a month.">
             <textarea
               id="cf-description"
               rows={4}

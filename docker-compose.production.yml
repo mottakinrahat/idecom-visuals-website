@@ -1,0 +1,117 @@
+# Production stack: nginx (80/443) → frontend (Next.js) + backend (NestJS). Docker only — no PM2, no host Node.
+#
+# Always run through deploy/dc.sh (it loads .env.production and the currently deployed IMAGE_TAG):
+#   ./deploy/dc.sh ps
+#   ./deploy/dc.sh logs -f backend
+name: idecom
+
+services:
+  backend:
+    image: ghcr.io/${GHCR_NAMESPACE}/idecom-backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      # same-origin through nginx, so this is only a safety net
+      CORS_ORIGIN: https://${DOMAIN}
+      # Cloudflare R2 uploads — leave empty to store files in the uploads volume instead
+      CLOUDFLARE_S3_API_ENDPOINT: ${CLOUDFLARE_S3_API_ENDPOINT:-}
+      CLOUDFLARE_ACCESSKEY_ID: ${CLOUDFLARE_ACCESSKEY_ID:-}
+      CLOUDFLARE_SECRETACCESS_KEY: ${CLOUDFLARE_SECRETACCESS_KEY:-}
+      CLOUDFLARE_R2_BUCKET_NAME: ${CLOUDFLARE_R2_BUCKET_NAME:-}
+      CLOUDFLARE_R2_PUBLIC_URL: ${CLOUDFLARE_R2_PUBLIC_URL:-}
+      # PostgreSQL (Neon). Tables are created automatically on first start.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in .env.production}
+    volumes:
+      - backend_uploads:/app/backend/uploads   # uploaded images
+    expose:
+      - "5000"            # internal only — NOT published on the host
+    networks: [app]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  frontend:
+    image: ghcr.io/${GHCR_NAMESPACE}/idecom-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    expose:
+      - "3000"            # internal only
+    networks: [app]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging: *logging
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      backend: { condition: service_healthy }
+      frontend: { condition: service_healthy }
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/templates:/etc/nginx/templates:ro   # rendered with envsubst at start (only ${DOMAIN})
+      - certbot_www:/var/www/certbot:ro
+      - letsencrypt:/etc/letsencrypt:ro
+    # reload every 6h so renewed certificates are picked up without downtime
+    command: >
+      /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+      exec nginx -g 'daemon off;'"
+    networks: [app]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *logging
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+    volumes:
+      - certbot_www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    networks: [app]
+    logging: *logging
+
+networks:
+  app:
+    name: idecom_app
+
+volumes:
+  backend_uploads:
+    name: idecom_backend_uploads
+  letsencrypt:
+    name: idecom_letsencrypt
+  certbot_www:
+    name: idecom_certbot_www

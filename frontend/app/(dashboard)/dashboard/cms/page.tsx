@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Thumb from "@/components/home/Thumb";
 import { parseVideo } from "@/lib/embed";
+import { api, assetUrl } from "@/lib/api";
+import { usePortfolioAdmin, toCard, fromCard } from "@/lib/portfolio";
 import { detectDuration, formatDuration } from "@/lib/duration";
 import {
   Video,
@@ -42,6 +44,52 @@ const TABS: { id: CmsTab; label: string; sub: string; icon: React.ComponentType<
   { id: "contact", label: "CTA & Footer", sub: "WhatsApp & contact", icon: PhoneCall },
 ];
 
+/** "Upload video" button: sends an MP4/WebM/MOV (≤ 100 MB) to the backend and returns its URL. */
+function UploadVideoButton({ onUploaded }: { onUploaded: (url: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const pick = async (file?: File) => {
+    if (!file) return;
+    setError("");
+    if (!/^video\/(mp4|webm|quicktime)$/.test(file.type)) return setError("Use an MP4, WebM or MOV video");
+    if (file.size > 100 * 1024 * 1024) return setError("Video must be 100 MB or smaller");
+    setBusy(true);
+    try {
+      const { url } = await api.uploadVideo(file);
+      onUploaded(assetUrl(url)); // absolute URL, so the website can play it from anywhere
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="shrink-0">
+      <label
+        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] text-[var(--d-accent)] ${
+          busy ? "opacity-60 cursor-progress" : "hover:border-[var(--d-primary)] cursor-pointer"
+        }`}
+      >
+        <Upload className="w-3.5 h-3.5" />
+        {busy ? "Uploading…" : "Upload video"}
+        <input
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime"
+          className="hidden"
+          disabled={busy}
+          onChange={(e) => {
+            void pick(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {error && <p className="mt-1 text-[11px] text-red-400 max-w-[180px]">{error}</p>}
+    </div>
+  );
+}
+
 /** Reads the pasted link, detects its length and writes it into the Duration field. */
 function AutoDuration({ url, onDetect }: { url?: string; onDetect: (d: string) => void }) {
   const [state, setState] = useState<"idle" | "busy" | "ok" | "fail">("idle");
@@ -72,80 +120,58 @@ export default function DashboardCmsPage() {
     setTimeout(() => setSavedToast(false), 2000);
   };
 
-  const handleImageUpload = (file: File, onResult: (dataUrl: string) => void) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        onResult(reader.result);
-        notifySaved();
-      }
-    };
-    reader.readAsDataURL(file);
+  /** Uploads to the backend (Cloudflare R2 when configured) and returns a short URL. */
+  const handleImageUpload = async (file: File, onResult: (url: string) => void) => {
+    try {
+      const { url } = await api.uploadImage(file);
+      onResult(url);
+      notifySaved();
+    } catch {
+      // backend offline: keep working with an inline image (large, stored only in this browser)
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          onResult(reader.result);
+          notifySaved();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  /* Helpers for Videos & Reels */
+  /* Videos & Reels live in the backend (video portfolio table), not in this browser */
+  const portfolio = usePortfolioAdmin();
+  const landscapeItems = (portfolio.items ?? []).filter((v) => v.videoType === "video").map(toCard);
+  const verticalItems = (portfolio.items ?? []).filter((v) => v.videoType === "reel").map(toCard);
+  const [importing, setImporting] = useState(false);
+
+  // items an older CMS version kept only in this browser (placeholders without any link/thumbnail are ignored)
+  const browserOnly = [
+    ...content.videos.landscape.map((card) => ({ card, type: "video" as const })),
+    ...content.videos.vertical.map((card) => ({ card, type: "reel" as const })),
+  ].filter(({ card }) => card.videoUrl || card.thumbUrl);
+
+  const importBrowserVideos = async () => {
+    setImporting(true);
+    const done = await portfolio.importFrom(browserOnly);
+    if (done === browserOnly.length) {
+      updateContent((p) => ({ ...p, videos: { ...p.videos, landscape: [], vertical: [] } })); // now safely on the server
+    }
+    setImporting(false);
+    notifySaved();
+  };
+
   const addVideoItem = (kind: "landscape" | "vertical") => {
-    const newItem: VideoItem =
-      kind === "landscape"
-        ? {
-            id: `l-${Date.now()}`,
-            w: "New",
-            tag: "Brand film",
-            t: "New landscape project",
-            d: "00:01:00:00",
-            a: "#3f6f12",
-            b: "#1a2a0b",
-            videoUrl: "",
-            thumbUrl: "",
-          }
-        : {
-            id: `v-${Date.now()}`,
-            w: "Reel",
-            tag: "Reel",
-            t: "New vertical reel",
-            d: "00:00:30",
-            a: "#5a2f7a",
-            b: "#170c24",
-            videoUrl: "",
-            thumbUrl: "",
-          };
+    void portfolio.add(kind === "landscape" ? "video" : "reel").then(notifySaved);
+  };
 
-    updateContent((prev) => ({
-      ...prev,
-      videos: {
-        ...prev.videos,
-        [kind]: [newItem, ...prev.videos[kind]],
-      },
-    }));
+  const updateVideoItem = (_kind: "landscape" | "vertical", id: string, patch: Partial<VideoItem>) => {
+    portfolio.patch(id, fromCard(patch));
     notifySaved();
   };
 
-  const updateVideoItem = (
-    kind: "landscape" | "vertical",
-    id: string,
-    patch: Partial<VideoItem>
-  ) => {
-    updateContent((prev) => ({
-      ...prev,
-      videos: {
-        ...prev.videos,
-        [kind]: prev.videos[kind].map((item) =>
-          item.id === id ? { ...item, ...patch } : item
-        ),
-      },
-    }));
-    notifySaved();
-  };
-
-  const deleteVideoItem = (kind: "landscape" | "vertical", id: string) => {
-    updateContent((prev) => ({
-      ...prev,
-      videos: {
-        ...prev.videos,
-        [kind]: prev.videos[kind].filter((item) => item.id !== id),
-      },
-    }));
-    notifySaved();
+  const deleteVideoItem = (_kind: "landscape" | "vertical", id: string) => {
+    void portfolio.remove(id).then(notifySaved);
   };
 
   return (
@@ -302,6 +328,7 @@ export default function DashboardCmsPage() {
               <label className="block font-mono text-[11px] text-[var(--d-muted)] mb-1.5">
                 Background Video URL (.mp4 / Cloudflare R2 / CDN)
               </label>
+              <div className="flex gap-2 items-start">
               <input
                 value={content.hero.videoUrl}
                 onChange={(e) => {
@@ -311,9 +338,16 @@ export default function DashboardCmsPage() {
                   }));
                   notifySaved();
                 }}
-                placeholder="https://.../video.mp4"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-accent)]"
+                placeholder="https://.../video.mp4 — or upload →"
+                className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-accent)]"
               />
+              <UploadVideoButton
+                onUploaded={(url) => {
+                  updateContent((p) => ({ ...p, hero: { ...p.hero, videoUrl: url } }));
+                  notifySaved();
+                }}
+              />
+              </div>
             </div>
 
             <div>
@@ -451,6 +485,26 @@ export default function DashboardCmsPage() {
       {/* TAB 2 & 3: 16:9 LANDSCAPE VIDEOS OR 9:16 VERTICAL REELS */}
       {(activeTab === "videos" || activeTab === "reels") && (
         <div className="flex flex-col gap-5">
+          {portfolio.error && (
+            <div role="alert" className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[13px] text-red-500">
+              {portfolio.error}
+            </div>
+          )}
+          {browserOnly.length > 0 && !portfolio.error && (
+            <div className="px-4 py-3 rounded-xl bg-[var(--d-tint)] border border-[var(--d-line)] text-[13px] flex flex-wrap items-center justify-between gap-3">
+              <span>
+                <b>{browserOnly.length}</b> video{browserOnly.length > 1 ? "s" : ""} are saved only in this browser. Move them to the server so they are stored in the database.
+              </span>
+              <button
+                type="button"
+                disabled={importing}
+                onClick={importBrowserVideos}
+                className="px-4 py-2 rounded-full bg-[var(--d-primary)] hover:bg-[var(--d-primary-hi)] text-[var(--d-ink)] text-[12px] font-semibold cursor-pointer disabled:opacity-60"
+              >
+                {importing ? "Moving…" : "Move to server"}
+              </button>
+            </div>
+          )}
           <div className="p-5 rounded-2xl bg-[var(--d-card)] border border-[var(--d-line)] flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="font-mono text-[11px] uppercase tracking-wider text-[var(--d-accent)]">
@@ -460,8 +514,8 @@ export default function DashboardCmsPage() {
               </span>
               <h3 className="text-[15px] font-semibold text-[var(--d-fg)] mt-0.5">
                 {activeTab === "videos"
-                  ? `16:9 Landscape Featured Videos (${content.videos.landscape.length})`
-                  : `9:16 Vertical Short-Form Reels (${content.videos.vertical.length})`}
+                  ? `16:9 Landscape Featured Videos (${landscapeItems.length})`
+                  : `9:16 Vertical Short-Form Reels (${verticalItems.length})`}
               </h3>
             </div>
             <button
@@ -477,10 +531,7 @@ export default function DashboardCmsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {(activeTab === "videos"
-              ? content.videos.landscape
-              : content.videos.vertical
-            ).map((item) => {
+            {(activeTab === "videos" ? landscapeItems : verticalItems).map((item) => {
               const kind = activeTab === "videos" ? "landscape" : "vertical";
               return (
                 <div
@@ -614,6 +665,7 @@ export default function DashboardCmsPage() {
                       <label className="block font-mono text-[10px] text-[var(--d-muted)] mb-1">
                         Video Link (YouTube / Facebook / .mp4)
                       </label>
+                      <div className="flex gap-2 items-start">
                       <input
                         value={item.videoUrl || ""}
                         onChange={(e) =>
@@ -621,9 +673,11 @@ export default function DashboardCmsPage() {
                             videoUrl: e.target.value,
                           })
                         }
-                        placeholder="Paste YouTube or Facebook video link"
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-fg)]"
+                        placeholder="Paste YouTube / Facebook link — or upload →"
+                        className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[12px] font-mono text-[var(--d-fg)]"
                       />
+                      <UploadVideoButton onUploaded={(url) => { updateVideoItem(kind, item.id, { videoUrl: url }); notifySaved(); }} />
+                      </div>
                     </div>
                     <div className="col-span-2">
                       <label className="block font-mono text-[10px] text-[var(--d-muted)] mb-1">
@@ -1119,27 +1173,14 @@ export default function DashboardCmsPage() {
               CTA & Footer Inquiries
             </span>
             <h3 className="text-[15px] font-semibold text-[var(--d-fg)]">
-              WhatsApp Direct Chat, Contact Details & Bio
+              Contact Details & Footer Bio
             </h3>
+            <p className="text-[12px] text-[var(--d-muted)] mt-1">
+              The WhatsApp number and social links are managed once, in Settings.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-mono text-[11px] text-[var(--d-muted)] mb-1">
-                WhatsApp Number (Country code, no +)
-              </label>
-              <input
-                value={content.contact.whatsappNumber}
-                onChange={(e) => {
-                  updateContent((p) => ({
-                    ...p,
-                    contact: { ...p.contact, whatsappNumber: e.target.value },
-                  }));
-                  notifySaved();
-                }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--d-card2)] border border-[var(--d-line)] text-[13px] font-mono text-[var(--d-accent)]"
-              />
-            </div>
             <div>
               <label className="block font-mono text-[11px] text-[var(--d-muted)] mb-1">
                 Public Email

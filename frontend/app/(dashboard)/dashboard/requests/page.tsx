@@ -165,7 +165,11 @@ function Requests() {
                 <Steps status={q.status} />
               </div>
 
-              <p className="text-[13px] leading-relaxed whitespace-pre-line">{q.description}</p>
+              {q.description ? (
+                <p className="text-[13px] leading-relaxed whitespace-pre-line">{q.description}</p>
+              ) : (
+                <p className="text-[13px] text-[var(--d-muted)] italic">No message — the customer left this blank.</p>
+              )}
 
               <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px]">
                 <a href={`tel:${q.phone}`} className="inline-flex items-center gap-1.5 text-[var(--d-accent)] font-medium hover:underline"><Phone className="w-3.5 h-3.5" />{q.phone}</a>
@@ -223,9 +227,8 @@ function Requests() {
                   {q.status === "pending" && (
                     <>
                       <a href={`tel:${q.phone}`} className={PRIMARY}><Phone className="w-4 h-4" />Call now</a>
-                      <button type="button" className={OUTLINE} onClick={() => { setPanel({ id: q.id, kind: "verify" }); setText(""); }}>I called — mark verified</button>
+                      <button type="button" className={OUTLINE} onClick={() => { setPanel({ id: q.id, kind: "verify" }); setText(""); }}>Accept</button>
                       <button type="button" className={MUTED} onClick={() => { setPanel({ id: q.id, kind: "reject" }); setText(""); }}>Reject</button>
-                      <p className="basis-full text-[11.5px] text-[var(--d-muted)]">Accept unlocks after the phone call is verified.</p>
                     </>
                   )}
                   {q.status === "verified" && (

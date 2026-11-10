@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { API_URL } from "@/lib/api";
+import { apiFetch, clearError, reportError } from "@/lib/http";
 
 export type VideoItem = {
   id: string;
@@ -188,12 +190,10 @@ export type SiteContent = {
     title: string;
     em: string;
     sub: string;
-    whatsappNumber: string;
     email: string;
     phone: string;
     location: string;
     footerBio: string;
-    socials: { name: string; url: string }[];
   };
 };
 
@@ -332,97 +332,24 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     title: "Let's work",
     em: "together",
     sub: "Tell us about your brand, your deadline and your budget. We usually reply within 24 hours.",
-    whatsappNumber: "8801700000000",
     email: "hello@idecomvisuals.com",
     phone: "+880 1XXX-XXXXXX",
     location: "Bangladesh",
     footerBio:
       "IDeCom Visuals is a creative studio for brands and creators. We plan, shoot, edit and design content that stops the scroll, then run the campaigns that put it in front of the right people.",
-    socials: [
-      { name: "Facebook", url: "#contact" },
-      { name: "Instagram", url: "#contact" },
-      { name: "YouTube", url: "#contact" },
-    ],
   },
 };
 
-export const DEFAULT_CRM_LEADS: CrmLead[] = [
-  {
-    id: "crm-1",
-    client: "Tariq Hasan",
-    company: "Urban Brew Café",
-    email: "tariq@urbanbrew.bd",
-    phone: "+880 1711-223344",
-    service: "Video Production",
-    budget: 3500,
-    stage: "In Production",
-    dueDate: "2026-11-18",
-    notes: "4K café launch film + 5 vertical Instagram reels with color grade.",
-  },
-  {
-    id: "crm-2",
-    client: "Nadia Rahman",
-    company: "Kōra Skincare",
-    email: "nadia@korastudio.com",
-    phone: "+880 1819-554433",
-    service: "Full Retainer",
-    budget: 6200,
-    stage: "In Production",
-    dueDate: "2026-11-25",
-    notes: "Monthly product commercial shoot, packaging refresh & paid ad creatives.",
-  },
-  {
-    id: "crm-3",
-    client: "Rafiq Ahmed",
-    company: "Vanta Wear",
-    email: "rafiq@vantawear.io",
-    phone: "+880 1912-887766",
-    service: "Reels Package",
-    budget: 1800,
-    stage: "Review",
-    dueDate: "2026-11-12",
-    notes: "8 vertical fashion drop reels — first cut delivered, awaiting client feedback.",
-  },
-  {
-    id: "crm-4",
-    client: "Samira Chowdhury",
-    company: "Greenroot Organics",
-    email: "samira@greenroot.co",
-    phone: "+880 1611-998877",
-    service: "Brand Design",
-    budget: 2900,
-    stage: "Proposal Sent",
-    dueDate: "2026-11-30",
-    notes: "Complete brand identity, pouch packaging & social launch kit.",
-  },
-  {
-    id: "crm-5",
-    client: "Zayan Karim",
-    company: "Northlane Athletics",
-    email: "zayan@northlane.fit",
-    phone: "+880 1755-443322",
-    service: "Marketing",
-    budget: 2400,
-    stage: "New Inquiry",
-    dueDate: "2026-12-05",
-    notes: "Looking for Q4 Meta + YouTube ad campaign and gym promo reel.",
-  },
-  {
-    id: "crm-6",
-    client: "Farhan Islam",
-    company: "Roast & Co.",
-    email: "farhan@roastandco.com",
-    phone: "+880 1311-665544",
-    service: "Brand Design",
-    budget: 2100,
-    stage: "Completed",
-    dueDate: "2026-10-28",
-    notes: "Coffee bag label series & in-store poster set delivered and approved.",
-  },
-];
+// ---------------------------------------------------------------------------
+// Server-backed state. Everything below is stored in PostgreSQL through the backend
+// (CMS content in the tables site_sections, client_brands, client_stats, services → service_items, team_members,
+// site_contact + a small `kv_store` document for hero/settings; CRM in `crm_leads`) — nothing is kept in localStorage.
+// All components share ONE copy, so a change in the CMS shows up everywhere immediately.
+// ---------------------------------------------------------------------------
 
-const SITE_STORAGE_KEY = "idecom_cms_site_v1";
-const CRM_STORAGE_KEY = "idecom_crm_leads_v1";
+/** Keys older versions used in this browser — read once to move that data to the database, then removed. */
+const LEGACY_SITE_KEY = "idecom_cms_site_v1";
+const LEGACY_CRM_KEY = "idecom_crm_leads_v1";
 
 function mergeSiteContent(parsed: Partial<SiteContent>): SiteContent {
   return {
@@ -439,80 +366,166 @@ function mergeSiteContent(parsed: Partial<SiteContent>): SiteContent {
   };
 }
 
-export function useStudioStore() {
-  const [content, setContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT);
-  const [leads, setLeads] = useState<CrmLead[]>(DEFAULT_CRM_LEADS);
-  const [hydrated, setHydrated] = useState(false);
+type Snapshot = { content: SiteContent; leads: CrmLead[]; hydrated: boolean };
 
-  useEffect(() => {
-    try {
-      const savedSite = localStorage.getItem(SITE_STORAGE_KEY);
-      if (savedSite) {
-        setContent(mergeSiteContent(JSON.parse(savedSite)));
-      }
-      const savedCrm = localStorage.getItem(CRM_STORAGE_KEY);
-      if (savedCrm) {
-        setLeads(JSON.parse(savedCrm));
-      }
-    } catch {
-      // ignore storage errors
+let snap: Snapshot = { content: DEFAULT_SITE_CONTENT, leads: [], hydrated: false };
+const SERVER_SNAPSHOT = snap;
+const listeners = new Set<() => void>();
+const setSnap = (patch: Partial<Snapshot>) => {
+  snap = { ...snap, ...patch };
+  listeners.forEach((l) => l());
+};
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+};
+
+/** True only after the data was really loaded from the server — edits are blocked otherwise, so defaults can never overwrite your data. */
+let serverReady = false;
+const NOT_READY = "Not connected to the database, so this change was not saved. Check that the backend is running, then reload the page.";
+
+const readLegacy = <T,>(key: string): T | null => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+};
+const dropLegacy = (key: string) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+};
+
+const leadBody = (l: CrmLead) => ({
+  client: l.client,
+  company: l.company,
+  email: l.email,
+  phone: l.phone,
+  service: l.service,
+  budget: l.budget,
+  stage: l.stage,
+  dueDate: l.dueDate,
+  notes: l.notes,
+});
+
+async function load() {
+  try {
+    const [site, leads] = await Promise.all([
+      apiFetch<{ data: Partial<SiteContent> | null }>("/content/site"),
+      apiFetch<CrmLead[]>("/crm-leads"),
+    ]);
+
+    let content = site.data ? mergeSiteContent(site.data) : DEFAULT_SITE_CONTENT;
+    let list = leads;
+
+    // one-time move of anything an older version kept only in this browser
+    const legacySite = readLegacy<Partial<SiteContent>>(LEGACY_SITE_KEY);
+    if (legacySite && !site.data) {
+      content = mergeSiteContent(legacySite);
+      await apiFetch("/content/site", { method: "PUT", body: { data: content } });
+      dropLegacy(LEGACY_SITE_KEY);
     }
-    setHydrated(true);
-
-    const onStorage = () => {
-      try {
-        const s = localStorage.getItem(SITE_STORAGE_KEY);
-        if (s) setContent(mergeSiteContent(JSON.parse(s)));
-        const c = localStorage.getItem(CRM_STORAGE_KEY);
-        if (c) setLeads(JSON.parse(c));
-      } catch {
-        // ignore
-      }
-    };
-    window.addEventListener("idecom-store-update", onStorage);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener("idecom-store-update", onStorage);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  const updateContent = (updater: SiteContent | ((prev: SiteContent) => SiteContent)) => {
-    setContent((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      try {
-        localStorage.setItem(SITE_STORAGE_KEY, JSON.stringify(next));
-        window.dispatchEvent(new Event("idecom-store-update"));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  };
-
-  const resetContent = () => {
-    setContent(DEFAULT_SITE_CONTENT);
-    try {
-      localStorage.removeItem(SITE_STORAGE_KEY);
-      window.dispatchEvent(new Event("idecom-store-update"));
-    } catch {
-      // ignore
+    const legacyLeads = readLegacy<CrmLead[]>(LEGACY_CRM_KEY);
+    if (legacyLeads?.length && leads.length === 0) {
+      for (const l of legacyLeads) await apiFetch(`/crm-leads/${l.id}`, { method: "PUT", body: leadBody(l) });
+      list = await apiFetch<CrmLead[]>("/crm-leads");
+      dropLegacy(LEGACY_CRM_KEY);
     }
-  };
 
-  const updateLeads = (updater: CrmLead[] | ((prev: CrmLead[]) => CrmLead[])) => {
-    setLeads((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      try {
-        localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(next));
-        window.dispatchEvent(new Event("idecom-store-update"));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  };
-
-  return { content, updateContent, resetContent, leads, updateLeads, hydrated };
+    serverReady = true;
+    clearError();
+    setSnap({ content, leads: list, hydrated: true });
+  } catch (e) {
+    reportError((e as Error).message);
+    setSnap({ hydrated: true });
+    loading = null; // let the next page load try again
+  }
 }
 
+let loading: Promise<void> | null = null;
+function ensureLoaded() {
+  if (!loading) {
+    loading = load();
+    // don't lose the last edit when the tab is closed within the save delay
+    window.addEventListener("pagehide", () => {
+      if (siteDirty) void fetch(`${API_URL}/content/site`, { method: "PUT", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: snap.content }) });
+    });
+  }
+  return loading;
+}
+
+/* ---- CMS content (one JSON document) ---- */
+
+let siteTimer: ReturnType<typeof setTimeout> | undefined;
+let siteDirty = false;
+
+async function flushSite() {
+  clearTimeout(siteTimer);
+  siteDirty = false;
+  try {
+    await apiFetch("/content/site", { method: "PUT", body: { data: snap.content } });
+    clearError();
+  } catch (e) {
+    siteDirty = true;
+    reportError(`Could not save to the database: ${(e as Error).message}`);
+  }
+}
+
+function updateContent(updater: SiteContent | ((prev: SiteContent) => SiteContent)) {
+  if (!serverReady) return reportError(NOT_READY);
+  const next = typeof updater === "function" ? updater(snap.content) : updater;
+  setSnap({ content: next });
+  siteDirty = true;
+  clearTimeout(siteTimer);
+  siteTimer = setTimeout(flushSite, 800); // saved ~0.8 s after you stop typing
+}
+
+function resetContent() {
+  if (!serverReady) return reportError(NOT_READY);
+  setSnap({ content: DEFAULT_SITE_CONTENT });
+  void flushSite();
+}
+
+/* ---- CRM leads (table crm_leads: one row per lead) ---- */
+
+let leadQueue: Promise<void> = Promise.resolve();
+
+function updateLeads(updater: CrmLead[] | ((prev: CrmLead[]) => CrmLead[])) {
+  if (!serverReady) return reportError(NOT_READY);
+  const prev = snap.leads;
+  const next = typeof updater === "function" ? updater(prev) : updater;
+  setSnap({ leads: next });
+
+  const before = new Map(prev.map((l) => [l.id, JSON.stringify(leadBody(l))]));
+  const removed = prev.filter((l) => !next.some((n) => n.id === l.id));
+  const changed = next.filter((l) => before.get(l.id) !== JSON.stringify(leadBody(l)));
+
+  leadQueue = leadQueue.then(async () => {
+    try {
+      for (const l of removed) await apiFetch(`/crm-leads/${l.id}`, { method: "DELETE" });
+      for (const l of changed) await apiFetch(`/crm-leads/${l.id}`, { method: "PUT", body: leadBody(l) });
+      clearError();
+    } catch (e) {
+      reportError(`Could not save to the database: ${(e as Error).message}`);
+      try {
+        setSnap({ leads: await apiFetch<CrmLead[]>("/crm-leads") }); // show what is really stored
+      } catch {
+        // still offline
+      }
+    }
+  });
+}
+
+export function useStudioStore() {
+  const s = useSyncExternalStore(subscribe, () => snap, () => SERVER_SNAPSHOT);
+  useEffect(() => {
+    void ensureLoaded();
+  }, []);
+  return { content: s.content, leads: s.leads, hydrated: s.hydrated, updateContent, resetContent, updateLeads };
+}

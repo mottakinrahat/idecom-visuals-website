@@ -1,0 +1,113 @@
+name: Build & deploy (Docker)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false   # never cancel a deploy half-way
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: vars
+        run: |
+          echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "ns=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.ns }}/idecom-backend:${{ steps.vars.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.ns }}/idecom-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          # NEXT_PUBLIC_* is baked into the browser bundle at build time
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ vars.DOMAIN }}/api
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.ns }}/idecom-frontend:${{ steps.vars.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.ns }}/idecom-frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      # secrets are passed as environment variables (never spliced into shell text)
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      GHCR_PULL_USER: ${{ secrets.GHCR_PULL_USER }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+      APP_DIR: ${{ vars.VPS_APP_DIR }}
+      DOMAIN: ${{ vars.DOMAIN }}
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          # pinned host key (not ssh-keyscan) so a man-in-the-middle cannot impersonate the VPS
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Ship compose + nginx + scripts
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -p $VPS_PORT $VPS_USER@$VPS_HOST"
+          tar czf deploy.tgz docker-compose.production.yml deploy
+          $SSH "mkdir -p '$APP_DIR'"
+          $SSH "cat > '$APP_DIR/deploy.tgz'" < deploy.tgz
+          $SSH "cd '$APP_DIR' && tar xzf deploy.tgz && rm deploy.tgz && chmod +x deploy/*.sh"
+
+      - name: Deploy image tag
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy_key -p $VPS_PORT $VPS_USER@$VPS_HOST"
+          # registry login on the server with a read-only token (sent over stdin, never stored in the repo)
+          printf '%s' "$GHCR_PULL_TOKEN" | $SSH "docker login ghcr.io -u '$GHCR_PULL_USER' --password-stdin"
+          $SSH "cd '$APP_DIR' && ./deploy/deploy.sh '$TAG'"
+
+      - name: Smoke test
+        run: |
+          for i in 1 2 3 4 5 6; do
+            curl -fsS -o /dev/null "https://$DOMAIN/" && curl -fsS -o /dev/null "https://$DOMAIN/api" && exit 0
+            sleep 10
+          done
+          echo "Site did not answer after deploy"; exit 1

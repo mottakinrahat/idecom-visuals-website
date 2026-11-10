@@ -2,18 +2,14 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useSyncExternalStore } from "react";
 import { CustomPackageBuilder } from "@/components/packages/CustomPackageBuilder";
 import { useCustomPackages } from "@/lib/customPackages";
-
-const noop = () => () => {};
 
 /** /dashboard/package/custom → new package, /dashboard/package/custom/<id> → edit. */
 export default function CustomPackagePage() {
   const params = useParams<{ id?: string[] }>();
   const id = params.id?.[0];
-  const { packages } = useCustomPackages();
-  const ready = useSyncExternalStore(noop, () => true, () => false); // saved packages live in the browser
+  const { packages, ready } = useCustomPackages(); // `ready` = loaded from the database
 
   if (!ready) return <p className="text-[13px] text-[var(--d-muted)]">Loading…</p>;
 

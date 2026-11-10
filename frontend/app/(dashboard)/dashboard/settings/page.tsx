@@ -92,25 +92,16 @@ function SettingsView() {
   };
 
   const setSocialLink = (key: SocialPlatformKey, value: string) => {
-    updateContent((prev) => {
-      const nextSettings = {
+    updateContent((prev) => ({
+      ...prev,
+      settings: {
         ...(prev.settings ?? DEFAULT_SITE_SETTINGS),
         socialLinks: {
           ...(prev.settings?.socialLinks ?? DEFAULT_SITE_SETTINGS.socialLinks),
           [key]: value,
         },
-      };
-      const nextContact = { ...prev.contact };
-      if (key === "whatsapp") {
-        const digits = value.replace(/\D/g, "");
-        nextContact.whatsappNumber = digits || value.trim();
-      }
-      return {
-        ...prev,
-        settings: nextSettings,
-        contact: nextContact,
-      };
-    });
+      },
+    }));
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { apiFetch, clearError, reportError } from "./http";
 import { calculateRentalPrice, toMinutes, type DurationUnit } from "./rental";
 
 /** Flat rate for each labour added to a package. */
@@ -66,52 +67,94 @@ export function calcPackage(p: Pick<CustomPackage, "equipment" | "editing" | "ex
   return { equipment, editing, extras, subtotal, discount, total: round2(subtotal - discount) };
 }
 
-/* ---------- storage (browser) ---------- */
+/* ---------- storage: PostgreSQL via the backend (table custom_packages) ---------- */
 
-const KEY = "idecom_custom_packages_v1";
-const EVT = "idecom-custom-packages";
-let cache: { raw: string | null; list: CustomPackage[] } = { raw: null, list: [] };
+const LEGACY_KEY = "idecom_custom_packages_v1"; // older versions kept packages in this browser
 
-function read(): CustomPackage[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw !== cache.raw) cache = { raw, list: raw ? (JSON.parse(raw) as CustomPackage[]) : [] };
-  } catch {
-    // ignore
-  }
-  return cache.list;
-}
-
-const subscribe = (cb: () => void) => {
-  window.addEventListener(EVT, cb);
-  window.addEventListener("storage", cb);
+let list: CustomPackage[] = [];
+let loaded = false;
+let loading: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+const set = (next: CustomPackage[]) => {
+  list = next;
+  listeners.forEach((l) => l());
+};
+const subscribe = (l: () => void) => {
+  listeners.add(l);
   return () => {
-    window.removeEventListener(EVT, cb);
-    window.removeEventListener("storage", cb);
+    listeners.delete(l);
   };
 };
 
-const EMPTY: CustomPackage[] = [];
+const body = (p: CustomPackage) => ({
+  name: p.name,
+  client: p.client,
+  equipment: p.equipment,
+  editing: p.editing,
+  extras: p.extras,
+  discount: p.discount,
+  createdAt: p.createdAt,
+});
+
+async function load() {
+  try {
+    let rows = await apiFetch<CustomPackage[]>("/custom-packages");
+    // one-time move of packages that only exist in this browser
+    try {
+      const raw = localStorage.getItem(LEGACY_KEY);
+      const legacy = raw ? (JSON.parse(raw) as CustomPackage[]) : [];
+      if (legacy.length && rows.length === 0) {
+        for (const p of legacy) await apiFetch(`/custom-packages/${p.id}`, { method: "PUT", body: body(p) });
+        rows = await apiFetch<CustomPackage[]>("/custom-packages");
+        localStorage.removeItem(LEGACY_KEY);
+      }
+    } catch {
+      // storage unavailable — ignore
+    }
+    loaded = true;
+    clearError();
+    set(rows); // also wakes `ready` subscribers
+  } catch (e) {
+    reportError((e as Error).message);
+    loading = null;
+  }
+}
 
 export function useCustomPackages() {
-  const list = useSyncExternalStore(subscribe, read, () => EMPTY);
-  const [, force] = useState(0);
-
-  const write = useCallback((next: CustomPackage[]) => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      // ignore
-    }
-    window.dispatchEvent(new Event(EVT));
-    force((n) => n + 1);
+  const packages = useSyncExternalStore(subscribe, () => list, () => EMPTY);
+  // true once the list really came from the database (the edit page waits for this)
+  const ready = useSyncExternalStore(subscribe, () => loaded, () => false);
+  useEffect(() => {
+    if (!loading) loading = load();
   }, []);
 
-  const save = (p: CustomPackage) => {
-    const cur = read();
-    write(cur.some((x) => x.id === p.id) ? cur.map((x) => (x.id === p.id ? p : x)) : [p, ...cur]);
+  const save = async (p: CustomPackage) => {
+    if (!loaded) return reportError("Not connected to the database, so this package was not saved.");
+    const prev = list;
+    set(prev.some((x) => x.id === p.id) ? prev.map((x) => (x.id === p.id ? p : x)) : [p, ...prev]);
+    try {
+      await apiFetch(`/custom-packages/${p.id}`, { method: "PUT", body: body(p) });
+      clearError();
+    } catch (e) {
+      set(prev);
+      reportError(`Could not save to the database: ${(e as Error).message}`);
+    }
   };
-  const remove = (id: string) => write(read().filter((x) => x.id !== id));
 
-  return { packages: list, save, remove };
+  const remove = async (id: string) => {
+    if (!loaded) return reportError("Not connected to the database.");
+    const prev = list;
+    set(prev.filter((x) => x.id !== id));
+    try {
+      await apiFetch(`/custom-packages/${id}`, { method: "DELETE" });
+      clearError();
+    } catch (e) {
+      set(prev);
+      reportError(`Could not delete: ${(e as Error).message}`);
+    }
+  };
+
+  return { packages, ready, save, remove };
 }
+
+const EMPTY: CustomPackage[] = [];
