@@ -342,9 +342,12 @@ footer{border-top:1px solid var(--line);margin-top:clamp(40px,6vw,72px);padding-
 .cf-field input::placeholder,.cf-field textarea::placeholder{color:#6d7463}
 .cf-field input:focus,.cf-field select:focus,.cf-field textarea:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(156,246,10,.14)}
 .cf-field.has-err input,.cf-field.has-err select,.cf-field.has-err textarea{border-color:#FF6B5E}
-.cf-hint,.cf-err{margin:6px 0 0;font-size:12.5px}
+.cf-field.is-valid input{border-color:rgba(156,246,10,.55)}
+.cf-hint,.cf-err,.cf-ok,.cf-checking{margin:6px 0 0;font-size:12.5px}
 .cf-hint{color:var(--muted)}
 .cf-err{color:#FF8A80}
+.cf-ok{color:var(--lime);font-weight:500}
+.cf-checking{color:#D5DACB;font-style:italic}
 .cf-server{margin:16px 0 0;padding:12px 14px;border-radius:12px;background:rgba(255,107,94,.1);border:1px solid rgba(255,107,94,.35);color:#FFB4AC;font-size:14px}
 .cf-submit{width:100%;justify-content:center;margin-top:22px;padding:15px 22px;font-size:15px}
 .cf-submit:disabled{opacity:.6;cursor:progress}

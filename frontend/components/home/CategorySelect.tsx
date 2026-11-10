@@ -39,11 +39,13 @@ export default function CategorySelect({
   id,
   value,
   onChange,
+  onBlur,
   invalid,
 }: {
   id: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   invalid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -68,11 +70,14 @@ export default function CategorySelect({
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
+      if (!root.current?.contains(e.target as Node)) {
+        setOpen(false);
+        onBlur?.();
+      }
     };
     document.addEventListener("mousedown", away);
     return () => document.removeEventListener("mousedown", away);
-  }, [open]);
+  }, [open, onBlur]);
 
   // keep the highlighted row visible
   useEffect(() => {
@@ -92,8 +97,8 @@ export default function CategorySelect({
     else if (e.key === "Home") { e.preventDefault(); setActive(0); }
     else if (e.key === "End") { e.preventDefault(); setActive(options.length - 1); }
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(options[active]); }
-    else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
-    else if (e.key === "Tab") setOpen(false);
+    else if (e.key === "Escape") { e.preventDefault(); setOpen(false); onBlur?.(); }
+    else if (e.key === "Tab") { setOpen(false); onBlur?.(); }
   };
 
   return (
@@ -108,6 +113,7 @@ export default function CategorySelect({
         aria-controls={listId}
         data-invalid={invalid}
         onClick={() => (open ? setOpen(false) : openMenu())}
+        onBlur={() => { if (!open) onBlur?.(); }}
         onKeyDown={onKey}
       >
         <span className="cs-ic"><Current size={18} color="currentColor" /></span>
